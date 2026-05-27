@@ -32,6 +32,10 @@ Use the `resizable` shadcn component (wraps `react-resizable-panels`) for resiza
 
 Use `@xyflow/react` (React Flow) for node-based diagrams, flow charts, workflow builders, and canvas layouts with connected nodes.
 
+# Typography
+
+Font: Inter (loaded via `next/font/google` in layout.tsx, variable `--font-inter`). Always use Inter — never change the font.
+
 # Design preferences
 
 - Clean, minimal aesthetic
