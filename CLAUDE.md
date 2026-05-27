@@ -28,6 +28,10 @@ Use `@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/utilities` for drag-and-drop
 
 Use the `resizable` shadcn component (wraps `react-resizable-panels`) for resizable panel layouts.
 
+# Canvas and flow diagrams
+
+Use `@xyflow/react` (React Flow) for node-based diagrams, flow charts, workflow builders, and canvas layouts with connected nodes.
+
 # Design preferences
 
 - Clean, minimal aesthetic
