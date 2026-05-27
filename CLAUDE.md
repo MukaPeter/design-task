@@ -43,6 +43,19 @@ Font: Inter (loaded via `next/font/google` in layout.tsx, variable `--font-inter
 - Dark mode support via shadcn theming (use `dark:` variants)
 - Mobile-first layouts
 
+# Component selection rules
+
+Follow this order strictly. Do not skip steps or jump ahead.
+
+1. **Select the right component first** — does it fit the use case out of the box? If not, pick a different one.
+2. **Use it as-is** — standard props, standard variants, standard sizes from the design system.
+3. **Arbitrary values** — only when the user specifies an exact number (e.g. `px-[13px]`). Fine to use, do not avoid them.
+4. **Override component structure or behaviour** — requires explicit alignment with the user before touching anything. Never do this unilaterally.
+
+Overriding a component's internals is high risk: it creates fragile behaviour, is hard to document, and breaks across sessions. When in doubt, use a plain HTML element instead and style it from scratch.
+
+Document the *why* behind component choices — not just the code. Decisions that aren't written down are lost between sessions.
+
 # What NOT to do
 
 - Don't install extra UI libraries (no MUI, no Chakra, no Radix directly)
