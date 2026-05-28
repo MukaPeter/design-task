@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { DndContext } from '@dnd-kit/core'
+import { DndContext, DragEndEvent } from '@dnd-kit/core'
 import { Sidebar } from '@/components/sidebar'
 import { Panel } from '@/components/panel'
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable'
@@ -42,7 +42,7 @@ const PANELS: Record<string, { tabs: { id: string; label: string; content: React
 export default function Demo() {
   const [order, setOrder] = useState(['panel-1', 'panel-2'])
 
-  function handleDragEnd({ active, over }: { active: { id: string }, over: { id: string } | null }) {
+  function handleDragEnd({ active, over }: DragEndEvent) {
     if (!over || active.id === over.id) return
     setOrder(prev => {
       const next = [...prev]
@@ -58,7 +58,7 @@ export default function Demo() {
       <Sidebar items={NAV_ITEMS} />
       <main className="flex-1 overflow-hidden">
         <DndContext id="demo-dnd" onDragEnd={handleDragEnd}>
-          <ResizablePanelGroup direction="horizontal">
+          <ResizablePanelGroup orientation="horizontal">
             {order.map((id, index) => (
               <React.Fragment key={id}>
                 {index > 0 && <ResizableHandle withHandle />}
