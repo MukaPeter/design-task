@@ -53,6 +53,8 @@ npx shadcn@latest add resizable
 
 **Make the handle wider than `w-px`** for a comfortable grab target — `w-2` works well, with the visual line as an absolutely positioned inner div.
 
+**v4 API change:** `direction` prop renamed to `orientation` on `ResizablePanelGroup`. Dev server won't catch this — only shows up in `npm run build` (TypeScript check). Always run a build before pushing to Vercel.
+
 **Panel order swap:** When you change the order of `ResizablePanel` children in React state, they re-render in the new order. The resize positions reset — acceptable for most use cases.
 
 **Key prop warning:** When mapping panels, use `React.Fragment` with a key instead of `<>`:
