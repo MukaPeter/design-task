@@ -43,6 +43,14 @@ Font: Inter (loaded via `next/font/google` in layout.tsx, variable `--font-inter
 - Dark mode support via shadcn theming (use `dark:` variants)
 - Mobile-first layouts
 
+# Before building or modifying anything
+
+1. State which components you will use and from which library
+2. Read those component files
+3. Only then write code
+
+No exceptions.
+
 # Component selection rules
 
 Follow this order strictly. Do not skip steps or jump ahead.
