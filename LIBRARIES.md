@@ -4,6 +4,17 @@ Real gotchas and patterns discovered while building. Not docs — things the doc
 
 ---
 
+## Modified UI Components
+
+Tracking every change made to `src/components/ui/`. These are components installed via shadcn that we deliberately modified.
+
+| Library | Component | Modification | Why |
+|---|---|---|---|
+| shadcn/ui | `button.tsx` | Added `nav` size variant: `h-11 w-full px-3 gap-3 justify-start font-normal` | Sidebar nav items need a full-width, left-aligned button with fixed height. The default sizes don't fit — adding a variant is cleaner than overriding from outside. |
+| react-resizable-panels (via shadcn `resizable`) | `resizable.tsx` | Added two child divs inside `ResizableHandle`: a full-height animated line and a grip pill, both using `group-hover:` for highlight | The library exposes no hover styling API. We own the component so we added the visual directly inside it rather than patching from outside. |
+
+---
+
 ## shadcn/ui
 
 **Install components individually:**
@@ -254,6 +265,21 @@ When toggling label visibility in a sidebar, always keep the label in the DOM �
 ## Building Complex Components — Process Lessons
 
 Hard-won lessons from building the sidebar with collapsed / hover / pinned states.
+
+### Work with the component, not against it
+
+Use the system's existing scale — Tailwind spacing, the component's variants, design tokens.
+Don't reach for arbitrary values when standard ones exist and mean the same thing.
+
+```tsx
+// ✗ arbitrary overrides — accumulate and become unmaintainable
+nav: "h-[44px] w-full px-[13px] gap-3"
+
+// ✓ standard scale — works with the system
+nav: "h-11 w-full px-3 gap-3"   // h-11 = 44px, px-3 = 12px
+```
+
+Overrides signal that you're fighting the component. Stop and ask: is there a standard value that works? Is there a variant I should add instead of patching from outside?
 
 ### Build one state at a time
 
