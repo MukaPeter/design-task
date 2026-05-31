@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -17,8 +16,30 @@ export interface ChatMessage {
 export interface ChatProps {
   initialMessages?: ChatMessage[]
   placeholder?: string
-  onSend?: (text: string) => void          // hook in real API here
-  theirInitials?: string
+  onSend?: (text: string) => void
+  theirName?: string
+  myName?: string
+  onArtifactClick?: (id: string) => void
+}
+
+const ARTIFACT_RE = /\b(REQ|RISK|SPEC|TEST|HAZ|SOP|DOC)[-][A-Z0-9]+(?:[-][A-Z0-9]+)*/g
+
+function MessageText({ text, onArtifactClick }: { text: string; onArtifactClick?: (id: string) => void }) {
+  if (!onArtifactClick) return <>{text}</>
+  const parts: React.ReactNode[] = []
+  let last = 0
+  let match: RegExpExecArray | null
+  ARTIFACT_RE.lastIndex = 0
+  while ((match = ARTIFACT_RE.exec(text)) !== null) {
+    if (match.index > last) parts.push(text.slice(last, match.index))
+    const id = match[0]
+    parts.push(
+      <span key={match.index} className="text-primary underline cursor-pointer font-medium" onClick={() => onArtifactClick(id)}>{id}</span>
+    )
+    last = match.index + id.length
+  }
+  if (last < text.length) parts.push(text.slice(last))
+  return <>{parts}</>
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -27,7 +48,9 @@ export function Chat({
   initialMessages = [],
   placeholder = 'Type a message...',
   onSend,
-  theirInitials = 'A',
+  theirName,
+  myName,
+  onArtifactClick,
 }: ChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages)
   const [input, setInput]       = useState('')
@@ -65,18 +88,19 @@ export function Chat({
             key={msg.id}
             className={cn('flex items-end gap-2', msg.from === 'me' && 'flex-row-reverse')}
           >
-            {msg.from === 'them' && (
-              <Avatar className="w-6 h-6 shrink-0">
-                <AvatarFallback className="text-xs">{theirInitials}</AvatarFallback>
-              </Avatar>
-            )}
             <div className={cn(
-              'max-w-[75%] rounded-2xl px-3 py-2 text-sm',
+              'max-w-[75%] rounded-2xl px-3 py-2 text-xs leading-relaxed',
               msg.from === 'me'
                 ? 'bg-primary text-primary-foreground rounded-br-sm'
-                : 'bg-muted rounded-bl-sm'
+                : 'bg-gray-100 text-foreground rounded-bl-sm'
             )}>
-              {msg.text}
+              {msg.from === 'them' && theirName && (
+                <div className="font-semibold text-xs mb-2">{theirName}</div>
+              )}
+              {msg.from === 'me' && myName && (
+                <div className="font-semibold text-xs mb-2 text-primary-foreground/80">{myName}</div>
+              )}
+              <MessageText text={msg.text} onArtifactClick={msg.from === 'them' ? onArtifactClick : undefined} />
             </div>
           </div>
         ))}
