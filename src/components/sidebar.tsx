@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Pin, PinOff } from 'lucide-react'
@@ -22,8 +22,15 @@ const W_EXPANDED  = 240
 
 export function Sidebar({ items, activeId, onSelect }: SidebarProps) {
   const [active,  setActive]  = useState(activeId ?? items[0]?.id)
-  const [pinned,  setPinned]  = useState(false)
+  const [pinned,  setPinned]  = useState(() => {
+    if (typeof window === 'undefined') return false
+    return localStorage.getItem('sidebar-pinned') === 'true'
+  })
   const [hovered, setHovered] = useState(false)
+
+  useEffect(() => {
+    localStorage.setItem('sidebar-pinned', String(pinned))
+  }, [pinned])
 
   const expanded = pinned || hovered
 

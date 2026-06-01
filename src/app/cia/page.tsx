@@ -135,21 +135,32 @@ function makePanels(
                 </tr>
               </thead>
               <tbody>
-                {DEFAULT_NODES.map(n => (
+                {DEFAULT_NODES.map(n => {
+                  const nd = { ...n.data, ...(nodeOverrides[n.id] ?? {}) }
+                  const conf = Number(nd.confidence)
+                  return (
                   <tr
                     key={n.id}
                     className={`border-b last:border-0 cursor-pointer transition-colors ${n.id === selectedNodeId ? 'bg-primary/10' : 'hover:bg-muted/50'}`}
                     onClick={() => onNodeClick(n)}
                   >
-                    <td className="py-2 font-medium">{String(n.data.label)}</td>
-                    <td className="py-2 text-muted-foreground">{String(n.data.nodeType)}</td>
-                    <td className="py-2"><StatusBadge status={String(n.data.status)} /></td>
-                    <td className={`py-2 font-medium ${Number(n.data.confidence) >= 85 ? 'text-foreground' : Number(n.data.confidence) >= 60 ? 'text-amber-600' : 'text-red-500'}`}>
-                      {n.data.confidence != null ? `${n.data.confidence}%` : '—'}
+                    <td className="py-2 font-medium">{String(nd.label)}</td>
+                    <td className="py-2 text-muted-foreground">{String(nd.nodeType)}</td>
+                    <td className="py-2"><StatusBadge status={String(nd.status)} /></td>
+                    <td className={`py-2 font-medium ${conf >= 85 ? 'text-foreground' : conf >= 60 ? 'text-amber-600' : 'text-red-500'}`}>
+                      <span className="flex items-center gap-1.5">
+                        {nd.confidence != null ? `${conf}%` : '—'}
+                        {!!nd.confidenceRaised && (
+                          <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-green-500 text-white shrink-0">
+                            <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                          </span>
+                        )}
+                      </span>
                     </td>
                     <td className="py-2 text-muted-foreground capitalize">{n.type}</td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
           </TabsContent>
