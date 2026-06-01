@@ -100,7 +100,7 @@ export interface FlowProps {
 export const DEFAULT_NODES: Node[] = [
   // Root — changed requirement
   {
-    id: 'req-142', type: 'primary', position: { x: 280, y: 130 },
+    id: 'req-142', type: 'primary', position: { x: 0, y: 260 },
     data: { label: 'REQ-142', sublabel: 'Rate Limit Enforcement', nodeType: 'Requirement', status: 'stale', confidence: 97,
       Description: 'Algorithm enforcing maximum infusion rate (mL/hr) per drug profile',
       Version: 'v2.1 → v2.2 (pending)', Owner: 'J. Müller', Regulation: 'IEC 62304 §5.3',
@@ -109,40 +109,40 @@ export const DEFAULT_NODES: Node[] = [
 
   // Direct impacts
   {
-    id: 'haz-047', type: 'primary', position: { x: 520, y: 20 },
+    id: 'haz-047', type: 'primary', position: { x: 260, y: 20 },
     data: { label: 'HAZ-047', sublabel: 'Overdose Delivery', nodeType: 'Hazard', status: 'needs-review', confidence: 88,
       Harm: 'Patient receives infusion dose exceeding therapeutic limit',
       Severity: 'Critical (S3)', Probability: 'Remote (P2)', Population: 'All pump users' },
   },
   {
-    id: 'risk-047a', type: 'primary', position: { x: 520, y: 130 },
+    id: 'risk-047a', type: 'primary', position: { x: 260, y: 200 },
     data: { label: 'RISK-047-A', sublabel: 'Rate Limit Control', nodeType: 'Risk Control', status: 'stale', confidence: 93,
       Mitigates: 'HAZ-047',
       Mechanism: 'Software enforces rate ceiling before motor command',
       'Residual Risk': 'Acceptable', 'Verification Status': 'Re-verification required' },
   },
   {
-    id: 'risk-047b', type: 'primary', position: { x: 520, y: 240 },
+    id: 'risk-047b', type: 'primary', position: { x: 260, y: 340 },
     data: { label: 'RISK-047-B', sublabel: 'Alarm on Violation', nodeType: 'Risk Control', status: 'up-to-date', confidence: 85,
       Mitigates: 'HAZ-047',
       Mechanism: 'Audible alarm + pump halt if rate limit breached',
       'Residual Risk': 'Acceptable', 'Verification Status': 'Verified' },
   },
   {
-    id: 'spec-sw230', type: 'primary', position: { x: 520, y: 350 },
+    id: 'spec-sw230', type: 'primary', position: { x: 260, y: 470 },
     data: { label: 'SPEC-SW-230', sublabel: 'Rate Limiter Design', nodeType: 'Design Spec', status: 'stale', confidence: 90,
       Component: 'Rate Limiter Module', Revision: 'r4 (draft)', Author: 'T. Nakamura' },
   },
 
   // Verification tests
   {
-    id: 'test-v340', type: 'primary', position: { x: 760, y: 80 },
+    id: 'test-v340', type: 'primary', position: { x: 520, y: 200 },
     data: { label: 'TEST-V-340', sublabel: 'Rate Limit Boundary', nodeType: 'Verification Test', status: 'stale', confidence: 95,
       Method: 'Boundary value analysis at ±5% of rate limit',
       'Last Run': '2024-11-03', Result: 'Pass (v2.1 — outdated)', Tester: 'QA Lab' },
   },
   {
-    id: 'test-v341', type: 'primary', position: { x: 760, y: 210 },
+    id: 'test-v341', type: 'primary', position: { x: 520, y: 340 },
     data: { label: 'TEST-V-341', sublabel: 'Overdose Prevention', nodeType: 'Verification Test', status: 'up-to-date', confidence: 87,
       Method: 'System test: alarm trigger + pump stop on limit breach',
       'Last Run': '2024-11-03', Result: 'Pass', Tester: 'QA Lab' },
@@ -150,19 +150,19 @@ export const DEFAULT_NODES: Node[] = [
 
   // Governance
   {
-    id: 'sop-015', type: 'primary', position: { x: 1000, y: 145 },
+    id: 'sop-015', type: 'primary', position: { x: 760, y: 270 },
     data: { label: 'SOP-QMS-015', sublabel: 'Software Change Control', nodeType: 'SOP', status: 'needs-review', confidence: 82,
       Version: 'v3.2', 'Last Reviewed': '2024-09-15', Owner: 'QA Manager', 'Approval Status': 'Active' },
   },
   {
-    id: 'iec-62304', type: 'primary', position: { x: 1220, y: 80 },
+    id: 'iec-62304', type: 'primary', position: { x: 1020, y: 100 },
     data: { label: 'IEC 62304', sublabel: '§5.3 Detailed Design', nodeType: 'Regulatory Clause', status: 'up-to-date', confidence: 96,
       Clause: '§5.3 Software Detailed Design',
       Requirement: 'Detailed design shall address all safety requirements',
       Compliance: 'Compliant', Evidence: 'SPEC-SW-230, TEST-V-340' },
   },
   {
-    id: 'iso-14971', type: 'primary', position: { x: 1220, y: 210 },
+    id: 'iso-14971', type: 'primary', position: { x: 1020, y: 340 },
     data: { label: 'ISO 14971', sublabel: '§6.3 Control Verification', nodeType: 'Regulatory Clause', status: 'needs-review', confidence: 79,
       Clause: '§6.3 Risk Control Verification',
       Requirement: 'Verify effectiveness of risk controls after changes',
@@ -171,23 +171,23 @@ export const DEFAULT_NODES: Node[] = [
 
   // Secondary — agent-suggested "check these"
   {
-    id: 'spec-hw105', type: 'secondary', position: { x: 760, y: 360 },
+    id: 'spec-hw105', type: 'secondary', position: { x: 620, y: 470 },
     data: { label: 'SPEC-HW-105', sublabel: 'Motor Controller Interface', nodeType: 'Design Spec', status: 'up-to-date', confidence: 54,
       Component: 'Pump Motor Controller Interface', Revision: 'r2.0', Author: 'H. Fischer' },
   },
   {
-    id: 'test-v210', type: 'secondary', position: { x: 760, y: 460 },
+    id: 'test-v210', type: 'secondary', position: { x: 620, y: 570 },
     data: { label: 'TEST-V-210', sublabel: 'Drug Library Update Test', nodeType: 'Verification Test', status: 'up-to-date', confidence: 61,
       Method: 'Regression: drug library update does not bypass rate limits',
       'Last Run': '2024-10-20', Result: 'Pass', Tester: 'QA Lab' },
   },
   {
-    id: 'ui-spec088', type: 'secondary', position: { x: 280, y: 320 },
+    id: 'ui-spec088', type: 'secondary', position: { x: 260, y: 570 },
     data: { label: 'UI-SPEC-088', sublabel: 'Rate Entry Screen', nodeType: 'Design Spec', status: 'needs-review', confidence: 58,
       Component: 'Rate Entry Screen', Revision: 'r1.3', Author: 'UX Team' },
   },
   {
-    id: 'dhf-024', type: 'secondary', position: { x: 1220, y: 340 },
+    id: 'dhf-024', type: 'secondary', position: { x: 1380, y: 460 },
     data: { label: 'DOC-DHF-024', sublabel: 'Design History File', nodeType: 'Documentation', status: 'needs-review', confidence: 67,
       Version: 'v5.1', 'Last Updated': '2024-11-01', Owner: 'Regulatory Affairs' },
   },
@@ -549,7 +549,7 @@ export function Flow({
         edgesReconnectable
         reconnectRadius={40}
         connectionMode={ConnectionMode.Loose}
-        defaultViewport={{ x: 80, y: 80, zoom: 0.9 }}
+        defaultViewport={{ x: 60, y: 60, zoom: 0.85 }}
       >
         {showBackground && <Background />}
         {showControls   && <Controls />}
