@@ -14,7 +14,8 @@
       "Bash(git push *)",
       "Bash(npx tsc *)",
       "Bash(node -e \"require\\('fs'\\).readFileSync\\('/Users/mukapeter/Desktop/design-task/src/app/traceability/page.tsx', 'utf8'\\)\")",
-      "Bash(ls /Users/mukapeter/Desktop/ | grep -i ketryx)"
+      "Bash(ls /Users/mukapeter/Desktop/ | grep -i ketryx)",
+      "Bash(git commit -m 'TEST-V-210 promotion: failed run static, triage + downstream sync post-sim *)"
     ]
   }
 }

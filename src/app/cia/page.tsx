@@ -146,7 +146,7 @@ function makePanels(
                     <td className="py-2 text-muted-foreground">{String(nd.nodeType)}</td>
                     <td className="py-2"><StatusBadge status={String(nd.status)} /></td>
                     <td className="py-2 font-medium">
-                      {n.type === 'secondary'
+                      {((nodeOverrides[n.id]?._type as string | undefined) ?? n.type) === 'secondary'
                         ? <span className="text-red-500">Possible impact</span>
                         : <span className="text-foreground">Impacted</span>
                       }
@@ -422,6 +422,38 @@ function CIA() {
                                   )
                                 })()}
                                 {(() => {
+                                  const downstreamTestNodes = DEFAULT_EDGES
+                                    .filter(e => e.source === node.id)
+                                    .map(e => DEFAULT_NODES.find(n => n.id === e.target))
+                                    .filter(Boolean)
+                                    .filter(n => TEST_RUN_HISTORY[n!.id] !== undefined) as typeof DEFAULT_NODES
+                                  const promotedTestNodes = downstreamTestNodes.filter(n => nodeOverrides[n.id]?._type === 'primary')
+                                  if (promotedTestNodes.length === 0) return null
+                                  return (
+                                    <>
+                                      <div className="border-t" />
+                                      <div>
+                                        <div className="text-xs font-medium text-muted-foreground mb-2">Linked test runs</div>
+                                        <div className="rounded-lg bg-muted/50 overflow-hidden">
+                                          {promotedTestNodes.map((n, ni) => {
+                                            const latestRun = TEST_RUN_HISTORY[n.id][0]
+                                            const cfg = RUN_CONFIG[latestRun.result]
+                                            return (
+                                              <div key={n.id} className={`flex items-center justify-between px-3 py-2 ${ni < promotedTestNodes.length - 1 ? 'border-b border-border/50' : ''}`}>
+                                                <div className="flex items-center gap-2">
+                                                  <span className={`w-2 h-2 rounded-full shrink-0 ${cfg.dot}`} />
+                                                  <button className="text-xs font-medium text-primary hover:underline text-left" onClick={() => setSelectedNode(n)}>{String(n.data.label)}</button>
+                                                </div>
+                                                <span className={`text-xs ${cfg.text}`}>{latestRun.timestamp}</span>
+                                              </div>
+                                            )
+                                          })}
+                                        </div>
+                                      </div>
+                                    </>
+                                  )
+                                })()}
+                                {(() => {
                                   const downstreamIds = DEFAULT_EDGES
                                     .filter(e => e.source === node.id)
                                     .map(e => e.target)
@@ -429,8 +461,10 @@ function CIA() {
                                     .map(id => DEFAULT_NODES.find(n => n.id === id))
                                     .filter(Boolean) as typeof DEFAULT_NODES
                                   if (downstreamNodes.length === 0) return null
-                                  const impacted = downstreamNodes.filter(n => n.type === 'primary')
-                                  const possible = downstreamNodes.filter(n => n.type === 'secondary')
+                                  const effectiveType = (n: typeof DEFAULT_NODES[0]) =>
+                                    (nodeOverrides[n.id]?._type as string | undefined) ?? n.type
+                                  const impacted = downstreamNodes.filter(n => effectiveType(n) === 'primary')
+                                  const possible = downstreamNodes.filter(n => effectiveType(n) === 'secondary')
                                   return (
                                     <>
                                       <div className="border-t" />
