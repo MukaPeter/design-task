@@ -55,7 +55,14 @@ function PrimaryNode({ data: rawData, selected }: NodeProps) {
         <div className="text-muted-foreground mt-0.5 leading-tight">{String(data.sublabel)}</div>
       )}
       {data.confidence != null && (
-        <div className={`mt-3 leading-tight ${confidenceColor(Number(data.confidence))}`}>{Number(data.confidence)}% confidence</div>
+        <div className="mt-3 flex items-center gap-1.5">
+          <span className={`leading-tight ${confidenceColor(Number(data.confidence))}`}>{Number(data.confidence)}% confidence</span>
+          {!!data.confidenceRaised && (
+            <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-green-500 text-white">
+              <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+            </span>
+          )}
+        </div>
       )}
       <Handle type="source" position={Position.Right} />
     </div>
@@ -74,7 +81,14 @@ function SecondaryNode({ data: rawData }: NodeProps) {
         <div className="text-muted-foreground/70 mt-0.5 leading-tight">{String(data.sublabel)}</div>
       )}
       {data.confidence != null && (
-        <div className={`mt-3 leading-tight ${confidenceColor(Number(data.confidence))}`}>{Number(data.confidence)}% confidence</div>
+        <div className="mt-3 flex items-center gap-1.5">
+          <span className={`leading-tight ${confidenceColor(Number(data.confidence))}`}>{Number(data.confidence)}% confidence</span>
+          {!!data.confidenceRaised && (
+            <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-green-500 text-white">
+              <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+            </span>
+          )}
+        </div>
       )}
       <Handle type="source" position={Position.Right} />
     </div>
@@ -93,6 +107,7 @@ export interface FlowProps {
   showBackground?: boolean
   onNodeClick?: (node: Node) => void
   selectedNodeId?: string | null
+  nodeOverrides?: Record<string, Record<string, unknown>>
 }
 
 // ─── CIA scenario data ────────────────────────────────────────────────────────
@@ -116,7 +131,7 @@ export const DEFAULT_NODES: Node[] = [
   },
   {
     id: 'risk-047a', type: 'primary', position: { x: 260, y: 200 },
-    data: { label: 'RISK-047-A', sublabel: 'Rate Limit Control', nodeType: 'Risk Control', status: 'stale', confidence: 93,
+    data: { label: 'RISK-047-A', sublabel: 'Rate Limit Control', nodeType: 'Risk Control', status: 'stale', confidence: 54,
       Mitigates: 'HAZ-047',
       Mechanism: 'Software enforces rate ceiling before motor command',
       'Residual Risk': 'Acceptable', 'Verification Status': 'Re-verification required' },
@@ -505,8 +520,16 @@ export function Flow({
   showBackground = true,
   onNodeClick,
   selectedNodeId,
+  nodeOverrides = {},
 }: FlowProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
+
+  useEffect(() => {
+    if (Object.keys(nodeOverrides).length === 0) return
+    setNodes(nds => nds.map(n =>
+      nodeOverrides[n.id] ? { ...n, data: { ...n.data, ...nodeOverrides[n.id] } } : n
+    ))
+  }, [nodeOverrides, setNodes])
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
 
   useEffect(() => {

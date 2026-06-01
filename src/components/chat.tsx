@@ -11,10 +11,13 @@ export interface ChatMessage {
   id: number
   from: 'me' | 'them'
   text: string
+  attachments?: string[]
 }
 
 export interface ChatProps {
   initialMessages?: ChatMessage[]
+  messages?: ChatMessage[]
+  onMessagesChange?: (messages: ChatMessage[]) => void
   placeholder?: string
   onSend?: (text: string) => void
   theirName?: string
@@ -64,15 +67,23 @@ function MessageText({ text, onArtifactClick, dark }: { text: string; onArtifact
 
 export function Chat({
   initialMessages = [],
+  messages: controlledMessages,
+  onMessagesChange,
   placeholder = 'Type a message...',
   onSend,
   theirName,
   myName,
   onArtifactClick,
 }: ChatProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages)
-  const [input, setInput]       = useState('')
-  const bottomRef               = useRef<HTMLDivElement>(null)
+  const [internalMessages, setInternalMessages] = useState<ChatMessage[]>(initialMessages)
+  const messages = controlledMessages ?? internalMessages
+  const setMessages = (updater: ChatMessage[] | ((prev: ChatMessage[]) => ChatMessage[])) => {
+    const next = typeof updater === 'function' ? updater(messages) : updater
+    if (onMessagesChange) onMessagesChange(next)
+    else setInternalMessages(next)
+  }
+  const [input, setInput] = useState('')
+  const bottomRef         = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -81,20 +92,11 @@ export function Chat({
   function send() {
     const text = input.trim()
     if (!text) return
-
     const msg: ChatMessage = { id: Date.now(), from: 'me', text }
-    setMessages(prev => [...prev, msg])
+    setMessages([...messages, msg])
     setInput('')
     onSend?.(text)
   }
-
-  // Expose addMessage so a parent / API route can push messages in
-  function addMessage(msg: Omit<ChatMessage, 'id'>) {
-    setMessages(prev => [...prev, { ...msg, id: Date.now() }])
-  }
-
-  // Attach addMessage to the component so callers can use a ref if needed
-  // (for LLM streaming responses, call addMessage from onSend callback)
 
   return (
     <div className="flex flex-col h-full">
@@ -119,6 +121,16 @@ export function Chat({
                 <div className="font-semibold text-xs mb-2 text-primary-foreground/80">{myName}</div>
               )}
               <MessageText text={msg.text} onArtifactClick={msg.from === 'them' ? onArtifactClick : undefined} dark={msg.from === 'me'} />
+              {msg.attachments && msg.attachments.length > 0 && (
+                <div className="flex flex-col gap-1 mt-2">
+                  {msg.attachments.map((file, i) => (
+                    <div key={i} className={`flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium ${msg.from === 'me' ? 'bg-white/20 text-white' : 'bg-white border border-border text-foreground'}`}>
+                      <svg className="w-3 h-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+                      {file}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         ))}

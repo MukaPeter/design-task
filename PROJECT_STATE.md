@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: 2026-06-01
+Last updated: 2026-06-01 (session 2)
 
 This document captures the current state of the project so any new session can pick up exactly where we left off.
 
@@ -250,9 +250,35 @@ PROJECT_STATE.md            ← this file
 
 ---
 
+## Re-analyse simulation (RISK-047-A demo)
+
+The Re-analyse button on the Agent Reasoning tab triggers a simulated agentic workflow:
+
+1. Adds a user "me" message with text + PDF attachment chip (`TEST-V-340_rerun_v2.2.pdf`)
+2. Streams agent tool call messages with delays (600ms + 1200ms per step)
+3. Includes a new `read_attachment()` tool call before the existing NODE_REASONING tools
+4. Final message: reasoning + confidence explanation + "Confidence updated: 54% → 93%"
+5. On completion: `nodeOverrides` state updates for that node:
+   - `confidence: 93`
+   - `confidenceRaised: true` — triggers green checkmark badge on node + detail panel
+   - `Verification Status: 'Re-verified (v2.2)'`
+   - `Evidence: 'TEST-V-340_rerun_v2.2.pdf — attached by J. Müller'`
+
+**RISK-047-A starts at 54% confidence (red) to make the raise visible.**
+
+### Key implementation details
+- `chatMessages` state lifted to CIA page — Chat is controlled via `messages` + `onMessagesChange` props
+- `nodeOverrides: Record<string, Record<string, unknown>>` state in CIA page — merged into `nodeData` in detail panel and passed to Flow component
+- Flow component applies overrides via `useEffect` on `nodeOverrides` → `setNodes`
+- `confidenceRaised` filtered from artifact fields list in detail panel
+- Chat `ChatMessage` type has optional `attachments?: string[]` — renders as file chips in bubble (white/20 on blue, white border on gray)
+
+---
+
 ## What's next
 
 - Consider highlighting graph nodes when agent mentions them in chat
 - Consider a legend for node types / status dots / confidence bands
 - Triage table: add sorting / filtering
+- Extend re-analyse simulation to more nodes
 - Push to Vercel when ready

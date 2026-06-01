@@ -9,7 +9,9 @@
       "Bash(cp /Users/mukapeter/Desktop/design-task/OVERVIEW.md /Users/mukapeter/Desktop/solution_coded_prototype.md)",
       "mcp__4cd45bd5-4cdf-44f4-92b0-dd4fa91af6f9__get_figjam",
       "Bash(npx shadcn@latest add tooltip --yes)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)"
     ]
   }
 }

@@ -7,7 +7,7 @@ import { useDraggable, useDroppable } from '@dnd-kit/core'
 import { GripVertical, Table2, Timeline, X } from 'lucide-react'
 import { Sidebar } from '@/components/sidebar'
 import { Chat } from '@/components/chat'
-import { Flow, NODE_REASONING, DEFAULT_NODES, TEST_RUN_HISTORY, NODE_DRAFTS, type RunResult } from '@/components/flow'
+import { Flow, NODE_REASONING, DEFAULT_NODES, DEFAULT_EDGES, TEST_RUN_HISTORY, NODE_DRAFTS, type RunResult } from '@/components/flow'
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
@@ -97,14 +97,18 @@ function DraggablePanel({
 
 // ─── Panel content — defined at module level so it never remounts ─────────────
 
-function makePanels(onNodeClick: (node: Node) => void, selectedNodeId: string | null, onArtifactClick: (id: string) => void): Record<string, { title: string; content: React.ReactNode }> {
+function makePanels(
+  onNodeClick: (node: Node) => void,
+  selectedNodeId: string | null,
+  onArtifactClick: (id: string) => void,
+  chatMessages: import('@/components/chat').ChatMessage[],
+  onChatMessagesChange: (m: import('@/components/chat').ChatMessage[]) => void,
+  nodeOverrides: Record<string, Record<string, unknown>>,
+): Record<string, { title: string; content: React.ReactNode }> {
   return {
     'chat-panel': {
       title: 'Ketryx Agent',
-      content: <Chat theirName="Ketryx Agent" myName="Peter" placeholder="Ask anything..." onArtifactClick={onArtifactClick} initialMessages={[
-        { id: 1, from: 'me',   text: 'I merged PR #847 (KTX-2047) — updated the infusion rate limit enforcement algorithm. Can you run a full change impact analysis for REQ-142?' },
-        { id: 2, from: 'them', text: 'I detected the merge of PR #847 linked to KTX-2047 and have already started the analysis.\n\nAnalysis complete. The impact graph has been populated.\n\nI identified 12 affected artifacts across requirements, risk controls, verification tests, and regulatory mappings.\n\nFour items are flagged as stale and require immediate attention — RISK-047-A, SPEC-SW-230, and TEST-V-340 are directly invalidated by the algorithm change.\n\nI\'ve also surfaced 4 secondary items with lower confidence scores for your review.' },
-      ]} />,
+      content: <Chat theirName="Ketryx Agent" myName="Peter" placeholder="Ask anything..." onArtifactClick={onArtifactClick} messages={chatMessages} onMessagesChange={onChatMessagesChange} />,
     },
     'flow-panel': {
       title: 'Change Impact Graph',
@@ -117,7 +121,7 @@ function makePanels(onNodeClick: (node: Node) => void, selectedNodeId: string | 
             </TabsList>
           </div>
           <TabsContent value="graph" className="flex-1 min-h-0 mt-0">
-            <Flow onNodeClick={onNodeClick} selectedNodeId={selectedNodeId} />
+            <Flow onNodeClick={onNodeClick} selectedNodeId={selectedNodeId} nodeOverrides={nodeOverrides} />
           </TabsContent>
           <TabsContent value="table" className="flex-1 overflow-y-auto mt-0 p-4">
             <table className="w-full text-xs">
@@ -134,7 +138,7 @@ function makePanels(onNodeClick: (node: Node) => void, selectedNodeId: string | 
                 {DEFAULT_NODES.map(n => (
                   <tr
                     key={n.id}
-                    className="border-b last:border-0 hover:bg-muted/50 cursor-pointer"
+                    className={`border-b last:border-0 cursor-pointer transition-colors ${n.id === selectedNodeId ? 'bg-primary/10' : 'hover:bg-muted/50'}`}
                     onClick={() => onNodeClick(n)}
                   >
                     <td className="py-2 font-medium">{String(n.data.label)}</td>
@@ -170,11 +174,18 @@ const LABEL_TO_ID = Object.fromEntries(
   DEFAULT_NODES.map(n => [String(n.data.label), n.id])
 )
 
+const INITIAL_MESSAGES: import('@/components/chat').ChatMessage[] = [
+  { id: 1, from: 'me',   text: 'I merged PR #847 (KTX-2047) — updated the infusion rate limit enforcement algorithm. Can you run a full downstream change impact analysis for REQ-142?' },
+  { id: 2, from: 'them', text: 'I detected the merge of PR #847 linked to KTX-2047 and have already started the analysis.\n\nDownstream Impact Analysis complete. The impact graph has been populated.\n\nI identified 12 affected artifacts across requirements, risk controls, verification tests, and regulatory mappings.\n\nFour items are flagged as stale and require immediate attention — RISK-047-A, SPEC-SW-230, and TEST-V-340 are directly invalidated by the algorithm change.\n\nI\'ve also surfaced 4 secondary items with lower confidence scores for your review.' },
+]
+
 function CIA() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [order, setOrder] = useState(['chat-panel', 'flow-panel'])
   const [selectedNode, setSelectedNode] = useState<Node | null>(null)
+  const [chatMessages, setChatMessages] = useState(INITIAL_MESSAGES)
+  const [nodeOverrides, setNodeOverrides] = useState<Record<string, Record<string, unknown>>>({})
 
   useEffect(() => {
     const nodeId = searchParams.get('node')
@@ -184,14 +195,64 @@ function CIA() {
     }
   }, [searchParams])
 
+  function simulateReanalysis(nodeId: string) {
+    const r = NODE_REASONING[nodeId]
+    const nodeLabel = String(DEFAULT_NODES.find(n => n.id === nodeId)?.data.label ?? nodeId)
+    if (!r) return
+
+    const userMessage = {
+      id: Date.now(),
+      from: 'me' as const,
+      text: `Here's the updated verification report for ${nodeLabel} — TEST-V-340 re-run against v2.2 boundary values. Please re-analyse.`,
+      attachments: ['TEST-V-340_rerun_v2.2.pdf'],
+    }
+
+    const agentSteps: Array<{ delay: number; text: string }> = [
+      { delay: 600,  text: `Re-analysing ${nodeLabel} with new evidence...` },
+      { delay: 1800, text: `🔍 \`read_attachment("TEST-V-340_rerun_v2.2.pdf")\`\n✓ Test report validated — boundary values confirmed for v2.2 algorithm` },
+      ...r.tools.map((t, i) => ({
+        delay: 3000 + i * 1200,
+        text: `🔍 \`${t.call}\`\n✓ ${t.resultText}${t.links && t.links.length > 0 ? '\n' + t.links.join(', ') : ''}`,
+      })),
+      { delay: 3000 + r.tools.length * 1200, text: `${r.reasoning}\n\n${r.confidenceExplanation}\n\nConfidence updated: 54% → 93%. TEST-V-340 re-run report logged as verification evidence on RISK-047-A.` },
+    ]
+
+    setChatMessages(prev => [...prev, userMessage])
+
+    let accumulated = 0
+    agentSteps.forEach((step, i) => {
+      accumulated += step.delay
+      const isLast = i === agentSteps.length - 1
+      setTimeout(() => {
+        setChatMessages(prev => [...prev, { id: Date.now() + Math.random(), from: 'them', text: step.text }])
+        if (isLast) {
+          setNodeOverrides(prev => ({
+            ...prev,
+            [nodeId]: {
+              confidence: 93,
+              confidenceRaised: true,
+              'Verification Status': 'Re-verified (v2.2)',
+              Evidence: 'TEST-V-340_rerun_v2.2.pdf — attached by J. Müller',
+            },
+          }))
+        }
+      }, accumulated)
+    })
+  }
+
   function handleArtifactClick(label: string) {
     const node = LABEL_TO_NODE[label]
     if (node) setSelectedNode(prev => prev?.id === node.id ? null : node)
   }
 
-  const PANELS = makePanels((node) => {
-    setSelectedNode(prev => prev?.id === node.id ? null : node)
-  }, selectedNode?.id ?? null, handleArtifactClick)
+  const PANELS = makePanels(
+    (node) => { setSelectedNode(prev => prev?.id === node.id ? null : node) },
+    selectedNode?.id ?? null,
+    handleArtifactClick,
+    chatMessages,
+    setChatMessages,
+    nodeOverrides,
+  )
 
   function handleDragEnd({ active, over }: DragEndEvent) {
     if (!over || active.id === over.id) return
@@ -234,13 +295,14 @@ function CIA() {
                     </DraggablePanel>
                   ) : (() => {
                     const node = selectedNode!
+                    const nodeData = { ...node.data, ...(nodeOverrides[node.id] ?? {}) }
                     return (
                       <ResizablePanel id="detail-panel" defaultSize={25} minSize={15}>
                         <div className="h-full flex flex-col">
                           <div className="h-14 flex items-center justify-between px-4 border-b shrink-0">
                             <div>
-                              <div className="text-sm font-semibold leading-tight">{String(node.data.label ?? '')}</div>
-                              <div className="text-xs text-muted-foreground">{String(node.data.nodeType ?? '')}</div>
+                              <div className="text-sm font-semibold leading-tight">{String(nodeData.label ?? '')}</div>
+                              <div className="text-xs text-muted-foreground">{String(nodeData.nodeType ?? '')}</div>
                             </div>
                             <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => setSelectedNode(null)}>
                               <X size={14} />
@@ -261,20 +323,27 @@ function CIA() {
                                 <div className="flex items-start justify-between">
                                   <div>
                                     <div className="text-xs font-medium text-muted-foreground mb-1">Status</div>
-                                    <StatusBadge status={String(node.data.status ?? '')} />
+                                    <StatusBadge status={String(nodeData.status ?? '')} />
                                   </div>
-                                  {node.data.confidence != null && (
+                                  {nodeData.confidence != null && (
                                     <div className="text-right">
                                       <div className="text-xs font-medium text-muted-foreground mb-1">Agent Confidence</div>
-                                      <div className={`text-sm font-semibold ${Number(node.data.confidence) >= 85 ? 'text-foreground' : Number(node.data.confidence) >= 60 ? 'text-amber-600' : 'text-red-500'}`}>
-                                        {Number(node.data.confidence)}%
+                                      <div className="flex items-center justify-end gap-1.5">
+                                        <span className={`text-sm font-semibold ${Number(nodeData.confidence) >= 85 ? 'text-foreground' : Number(nodeData.confidence) >= 60 ? 'text-amber-600' : 'text-red-500'}`}>
+                                          {Number(nodeData.confidence)}%
+                                        </span>
+                                        {!!nodeData.confidenceRaised && (
+                                          <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-green-500 text-white shrink-0">
+                                            <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                                          </span>
+                                        )}
                                       </div>
                                     </div>
                                   )}
                                 </div>
                                 <div className="border-t" />
-                                {Object.entries(node.data)
-                                  .filter(([key]) => !['label', 'sublabel', 'nodeType', 'status', 'confidence'].includes(key))
+                                {Object.entries(nodeData)
+                                  .filter(([key]) => !['label', 'sublabel', 'nodeType', 'status', 'confidence', 'confidenceRaised'].includes(key))
                                   .map(([key, val]) => (
                                     <div key={key}>
                                       <div className="text-xs font-medium text-muted-foreground mb-0.5">{key}</div>
@@ -305,6 +374,34 @@ function CIA() {
                                               </div>
                                             )
                                           })}
+                                        </div>
+                                      </div>
+                                    </>
+                                  )
+                                })()}
+                                {(() => {
+                                  const downstreamIds = DEFAULT_EDGES
+                                    .filter(e => e.source === node.id)
+                                    .map(e => e.target)
+                                  const downstreamNodes = downstreamIds
+                                    .map(id => DEFAULT_NODES.find(n => n.id === id))
+                                    .filter(Boolean) as typeof DEFAULT_NODES
+                                  if (downstreamNodes.length === 0) return null
+                                  return (
+                                    <>
+                                      <div className="border-t" />
+                                      <div>
+                                        <div className="text-xs font-medium text-muted-foreground mb-2">Downstream</div>
+                                        <div className="flex flex-col gap-2.5">
+                                          {downstreamNodes.map(n => (
+                                            <button
+                                              key={n.id}
+                                              className="text-xs text-primary hover:underline text-left"
+                                              onClick={() => setSelectedNode(n)}
+                                            >
+                                              {String(n.data.label)} — {String(n.data.sublabel)}
+                                            </button>
+                                          ))}
                                         </div>
                                       </div>
                                     </>
@@ -398,7 +495,7 @@ function CIA() {
                               })()}
                             </div>
                             <div className="shrink-0 border-t px-4 py-3 flex justify-end">
-                              <Button size="sm">Re-analyse</Button>
+                              <Button size="sm" onClick={() => simulateReanalysis(node.id)}>Re-analyse</Button>
                             </div>
                             </TabsContent>
                             {NODE_DRAFTS[node.id] && (() => {
@@ -419,8 +516,8 @@ function CIA() {
                                     </div>
                                   </div>
                                   <div className="shrink-0 border-t px-4 py-3 flex gap-2 justify-end">
-                                    <Button variant="outline" size="sm">Request changes</Button>
                                     <Button size="sm">Approve draft</Button>
+                                    <Button variant="outline" size="sm">Request changes</Button>
                                   </div>
                                 </TabsContent>
                               )
