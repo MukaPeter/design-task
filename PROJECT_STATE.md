@@ -12,7 +12,7 @@ A rapid UI prototyping environment built for a Head of Design interview at Ketry
 
 **Location:** `/Users/mukapeter/Desktop/design-task`
 **Repo:** https://github.com/MukaPeter/design-task
-**Deployed:** https://design-task-flax-gamma.vercel.app/demo2
+**Deployed:** https://design-task-flax-gamma.vercel.app/cia
 **Local:** `npm run dev` → http://localhost:3000
 
 **Deploying:**

@@ -25,7 +25,8 @@ export interface ChatProps {
 const ARTIFACT_RE = /\b(REQ|RISK|SPEC|TEST|HAZ|SOP|DOC)[-][A-Z0-9]+(?:[-][A-Z0-9]+)*/g
 const LINK_RE = /\b(PR\s*#\d+|KTX-\d+)/g
 
-function renderParagraph(text: string, onArtifactClick?: (id: string) => void): React.ReactNode {
+function renderParagraph(text: string, onArtifactClick?: (id: string) => void, dark?: boolean): React.ReactNode {
+  const linkClass = dark ? 'text-white underline font-medium' : 'text-primary underline font-medium'
   const combined = new RegExp(`${ARTIFACT_RE.source}|${LINK_RE.source}`, 'g')
   const parts: React.ReactNode[] = []
   let last = 0
@@ -34,9 +35,9 @@ function renderParagraph(text: string, onArtifactClick?: (id: string) => void): 
     if (match.index > last) parts.push(text.slice(last, match.index))
     const token = match[0]
     if (LINK_RE.test(token)) {
-      parts.push(<a key={match.index} href="#" className="text-primary underline font-medium">{token}</a>)
+      parts.push(<a key={match.index} href="#" className={linkClass}>{token}</a>)
     } else if (onArtifactClick) {
-      parts.push(<span key={match.index} className="text-primary underline cursor-pointer font-medium" onClick={() => onArtifactClick(token)}>{token}</span>)
+      parts.push(<span key={match.index} className={`${linkClass} cursor-pointer`} onClick={() => onArtifactClick(token)}>{token}</span>)
     } else {
       parts.push(token)
     }
@@ -47,13 +48,13 @@ function renderParagraph(text: string, onArtifactClick?: (id: string) => void): 
   return <>{parts}</>
 }
 
-function MessageText({ text, onArtifactClick }: { text: string; onArtifactClick?: (id: string) => void }) {
+function MessageText({ text, onArtifactClick, dark }: { text: string; onArtifactClick?: (id: string) => void; dark?: boolean }) {
   const paragraphs = text.split('\n\n').filter(Boolean)
-  if (paragraphs.length <= 1) return <>{renderParagraph(text, onArtifactClick)}</>
+  if (paragraphs.length <= 1) return <>{renderParagraph(text, onArtifactClick, dark)}</>
   return (
     <div className="space-y-2">
       {paragraphs.map((p, i) => (
-        <p key={i}>{renderParagraph(p, onArtifactClick)}</p>
+        <p key={i}>{renderParagraph(p, onArtifactClick, dark)}</p>
       ))}
     </div>
   )
@@ -117,7 +118,7 @@ export function Chat({
               {msg.from === 'me' && myName && (
                 <div className="font-semibold text-xs mb-2 text-primary-foreground/80">{myName}</div>
               )}
-              <MessageText text={msg.text} onArtifactClick={msg.from === 'them' ? onArtifactClick : undefined} />
+              <MessageText text={msg.text} onArtifactClick={msg.from === 'them' ? onArtifactClick : undefined} dark={msg.from === 'me'} />
             </div>
           </div>
         ))}
