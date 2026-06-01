@@ -22,11 +22,13 @@ const W_EXPANDED  = 240
 
 export function Sidebar({ items, activeId, onSelect }: SidebarProps) {
   const [active,  setActive]  = useState(activeId ?? items[0]?.id)
-  const [pinned,  setPinned]  = useState(() => {
-    if (typeof window === 'undefined') return false
-    return localStorage.getItem('sidebar-pinned') === 'true'
-  })
+  const [pinned,  setPinned]  = useState(false)
   const [hovered, setHovered] = useState(false)
+
+  useEffect(() => {
+    const stored = localStorage.getItem('sidebar-pinned')
+    if (stored === 'true') setPinned(true)
+  }, [])
 
   useEffect(() => {
     localStorage.setItem('sidebar-pinned', String(pinned))

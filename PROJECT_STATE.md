@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: 2026-06-01 (session 2)
+Last updated: 2026-06-01 (session 4)
 
 This document captures the current state of the project so any new session can pick up exactly where we left off.
 
@@ -81,6 +81,8 @@ Sidebar | Ketryx Agent (18%) | Handle | Matrix panel (82%)
 - 5 extra static requirements (REQ-031, REQ-058, REQ-110, REQ-175, REQ-220) defined locally in the page, not in `flow.tsx`
 
 **Chat:** pre-populated agent message explaining the matrix and prompting drill-down on red rows.
+
+**Drag-to-swap:** Both panels have GripVertical drag handles. DndContext wraps the group. Order persists in `localStorage` (`traceability-panel-order`). `DraggablePanel` component defined locally in the page.
 
 ---
 
@@ -275,10 +277,29 @@ The Re-analyse button on the Agent Reasoning tab triggers a simulated agentic wo
 
 ---
 
+## Recent additions (session 4)
+
+- **Hydration fix** — Sidebar `pinned` state now initialises as `false` on server, reads `localStorage` in `useEffect` after mount. Fixes hydration mismatch from lazy `useState` initialiser.
+- **Traceability page drag-to-swap** — Both panels now use `DraggablePanel` component (defined locally in traceability page). DndContext wraps the group. Panel order persists in `localStorage` (`traceability-panel-order`).
+- **CIA panel order persistence** — `order` state persisted in `localStorage` (`cia-panel-order`). Survives navigation.
+- **Root redirect** — `/` redirects to `/cia` via Next.js server-side `redirect()`.
+- **Triage table confidence** — rows merge `nodeOverrides` same as detail panel. Confidence + green checkmark update live after re-analyse.
+
+---
+
+## Recent additions (session 3)
+
+- **Root page redirect** — `/` redirects to `/cia` via Next.js `redirect()`
+- **Sidebar pin persistence** — `pinned` state stored in `localStorage` (`sidebar-pinned`). Survives navigation between `/cia` and `/traceability`. Uses lazy `useState` initialiser + `useEffect` to sync.
+- **Triage table confidence overrides** — triage rows now merge `nodeOverrides` same as detail panel. Confidence and green checkmark update live after re-analyse simulation.
+- **Triage table selected row** — row stays highlighted (`bg-primary/10`) while detail panel is open, clears on close.
+- **Downstream section** — Details tab shows clickable downstream node links at the bottom of the scrollable content. Clicking navigates the detail panel to that node.
+
+---
+
 ## What's next
 
 - Consider highlighting graph nodes when agent mentions them in chat
 - Consider a legend for node types / status dots / confidence bands
 - Triage table: add sorting / filtering
 - Extend re-analyse simulation to more nodes
-- Push to Vercel when ready

@@ -130,14 +130,12 @@ function makePanels(
                   <th className="text-left pb-2 font-medium">Artifact</th>
                   <th className="text-left pb-2 font-medium">Type</th>
                   <th className="text-left pb-2 font-medium">Status</th>
-                  <th className="text-left pb-2 font-medium">Confidence</th>
-                  <th className="text-left pb-2 font-medium">Impact</th>
+                  <th className="text-left pb-2 font-medium">Agent assessment</th>
                 </tr>
               </thead>
               <tbody>
                 {DEFAULT_NODES.map(n => {
                   const nd = { ...n.data, ...(nodeOverrides[n.id] ?? {}) }
-                  const conf = Number(nd.confidence)
                   return (
                   <tr
                     key={n.id}
@@ -147,17 +145,12 @@ function makePanels(
                     <td className="py-2 font-medium">{String(nd.label)}</td>
                     <td className="py-2 text-muted-foreground">{String(nd.nodeType)}</td>
                     <td className="py-2"><StatusBadge status={String(nd.status)} /></td>
-                    <td className={`py-2 font-medium ${conf >= 85 ? 'text-foreground' : conf >= 60 ? 'text-amber-600' : 'text-red-500'}`}>
-                      <span className="flex items-center gap-1.5">
-                        {nd.confidence != null ? `${conf}%` : '—'}
-                        {!!nd.confidenceRaised && (
-                          <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-green-500 text-white shrink-0">
-                            <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                          </span>
-                        )}
-                      </span>
+                    <td className="py-2 font-medium">
+                      {n.type === 'secondary'
+                        ? <span className="text-red-500">Possible impact</span>
+                        : <span className="text-foreground">Impacted</span>
+                      }
                     </td>
-                    <td className="py-2 text-muted-foreground capitalize">{n.type}</td>
                   </tr>
                   )
                 })}
@@ -209,6 +202,11 @@ function CIA() {
   }, [searchParams])
 
   function simulateReanalysis(nodeId: string) {
+    if (nodeId === 'test-v210') {
+      simulateV210Promotion()
+      return
+    }
+
     const r = NODE_REASONING[nodeId]
     const nodeLabel = String(DEFAULT_NODES.find(n => n.id === nodeId)?.data.label ?? nodeId)
     if (!r) return
@@ -242,10 +240,48 @@ function CIA() {
           setNodeOverrides(prev => ({
             ...prev,
             [nodeId]: {
-              confidence: 93,
               confidenceRaised: true,
               'Verification Status': 'Re-verified (v2.2)',
               Evidence: 'TEST-V-340_rerun_v2.2.pdf — attached by J. Müller',
+            },
+          }))
+        }
+      }, accumulated)
+    })
+  }
+
+  function simulateV210Promotion() {
+    const userMessage = {
+      id: Date.now(),
+      from: 'me' as const,
+      text: 'Ran TEST-V-210 after the rate limit change — it failed. Attaching the run report.',
+      attachments: ['TEST-V-210_run_2024-11-15.pdf'],
+    }
+
+    const agentSteps: Array<{ delay: number; text: string }> = [
+      { delay: 600,  text: 'Re-analysing TEST-V-210 with new evidence...' },
+      { delay: 1800, text: '🔍 `read_attachment("TEST-V-210_run_2024-11-15.pdf")`\n✓ Test failure confirmed — drug library rate validation references the enforcement boundary value from REQ-142' },
+      { delay: 3000, text: '🔍 `check_test_scope("TEST-V-210", "REQ-142")`\n✓ Direct dependency confirmed — test input uses rate limit parameter set by REQ-142' },
+      { delay: 4200, text: '🔍 `search_traceability_db("TEST-V-210")`\n✓ Trace link to REQ-142 enforcement boundary found via drug library config' },
+      { delay: 5600, text: 'TEST-V-210 failed because the drug library update flow reads the rate enforcement boundary defined in REQ-142. The v2.2 algorithm change altered that boundary, causing the test to fail.\n\nThis confirms a direct dependency — TEST-V-210 is no longer a possible impact. Promoting to confirmed impact.' },
+    ]
+
+    setChatMessages(prev => [...prev, userMessage])
+
+    let accumulated = 0
+    agentSteps.forEach((step, i) => {
+      accumulated += step.delay
+      const isLast = i === agentSteps.length - 1
+      setTimeout(() => {
+        setChatMessages(prev => [...prev, { id: Date.now() + Math.random(), from: 'them', text: step.text }])
+        if (isLast) {
+          setNodeOverrides(prev => ({
+            ...prev,
+            'test-v210': {
+              _type: 'primary',
+              status: 'stale',
+              Result: 'Failed — rate limit boundary mismatch',
+              'Last Run': '2024-11-15',
             },
           }))
         }
@@ -339,21 +375,13 @@ function CIA() {
                                     <div className="text-xs font-medium text-muted-foreground mb-1">Status</div>
                                     <StatusBadge status={String(nodeData.status ?? '')} />
                                   </div>
-                                  {nodeData.confidence != null && (
-                                    <div className="text-right">
-                                      <div className="text-xs font-medium text-muted-foreground mb-1">Agent Confidence</div>
-                                      <div className="flex items-center justify-end gap-1.5">
-                                        <span className={`text-sm font-semibold ${Number(nodeData.confidence) >= 85 ? 'text-foreground' : Number(nodeData.confidence) >= 60 ? 'text-amber-600' : 'text-red-500'}`}>
-                                          {Number(nodeData.confidence)}%
-                                        </span>
-                                        {!!nodeData.confidenceRaised && (
-                                          <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-green-500 text-white shrink-0">
-                                            <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                                          </span>
-                                        )}
-                                      </div>
-                                    </div>
-                                  )}
+                                  <div className="text-right">
+                                    <div className="text-xs font-medium text-muted-foreground mb-1">Agent assessment</div>
+                                    {node.type === 'secondary'
+                                      ? <span className="text-sm font-semibold text-red-500">Possible impact</span>
+                                      : <span className="text-sm font-semibold text-foreground">Impacted</span>
+                                    }
+                                  </div>
                                 </div>
                                 <div className="border-t" />
                                 {Object.entries(nodeData)
@@ -401,22 +429,45 @@ function CIA() {
                                     .map(id => DEFAULT_NODES.find(n => n.id === id))
                                     .filter(Boolean) as typeof DEFAULT_NODES
                                   if (downstreamNodes.length === 0) return null
+                                  const impacted = downstreamNodes.filter(n => n.type === 'primary')
+                                  const possible = downstreamNodes.filter(n => n.type === 'secondary')
                                   return (
                                     <>
                                       <div className="border-t" />
-                                      <div>
-                                        <div className="text-xs font-medium text-muted-foreground mb-2">Downstream</div>
-                                        <div className="flex flex-col gap-2.5">
-                                          {downstreamNodes.map(n => (
-                                            <button
-                                              key={n.id}
-                                              className="text-xs text-primary hover:underline text-left"
-                                              onClick={() => setSelectedNode(n)}
-                                            >
-                                              {String(n.data.label)} — {String(n.data.sublabel)}
-                                            </button>
-                                          ))}
-                                        </div>
+                                      <div className="space-y-4">
+                                        <div className="text-xs font-medium text-muted-foreground">Downstream</div>
+                                        {impacted.length > 0 && (
+                                          <div>
+                                            <div className="text-xs font-medium text-foreground mb-2">Impacted</div>
+                                            <div className="flex flex-col gap-2.5">
+                                              {impacted.map(n => (
+                                                <button
+                                                  key={n.id}
+                                                  className="text-xs text-primary hover:underline text-left"
+                                                  onClick={() => setSelectedNode(n)}
+                                                >
+                                                  {String(n.data.label)} — {String(n.data.sublabel)}
+                                                </button>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
+                                        {possible.length > 0 && (
+                                          <div>
+                                            <div className="text-xs font-medium text-red-500 mb-2">Possible impact</div>
+                                            <div className="flex flex-col gap-2.5">
+                                              {possible.map(n => (
+                                                <button
+                                                  key={n.id}
+                                                  className="text-xs text-primary hover:underline text-left"
+                                                  onClick={() => setSelectedNode(n)}
+                                                >
+                                                  {String(n.data.label)} — {String(n.data.sublabel)}
+                                                </button>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
                                       </div>
                                     </>
                                   )
@@ -486,7 +537,7 @@ function CIA() {
 
                                     {/* Confidence explanation */}
                                     <div>
-                                      <div className="text-xs font-semibold text-foreground mb-1">Why this confidence score</div>
+                                      <div className="text-xs font-semibold text-foreground mb-1">Why this was flagged</div>
                                       <div className="text-xs text-muted-foreground leading-relaxed">{r.confidenceExplanation}</div>
                                     </div>
 

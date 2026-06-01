@@ -54,16 +54,9 @@ function PrimaryNode({ data: rawData, selected }: NodeProps) {
       {data.sublabel && (
         <div className="text-muted-foreground mt-0.5 leading-tight">{String(data.sublabel)}</div>
       )}
-      {data.confidence != null && (
-        <div className="mt-3 flex items-center gap-1.5">
-          <span className={`leading-tight ${confidenceColor(Number(data.confidence))}`}>{Number(data.confidence)}% confidence</span>
-          {!!data.confidenceRaised && (
-            <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-green-500 text-white">
-              <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-            </span>
-          )}
-        </div>
-      )}
+      <div className="mt-2">
+        <span className="text-xs font-medium text-foreground">Impacted</span>
+      </div>
       <Handle type="source" position={Position.Right} />
     </div>
   )
@@ -80,16 +73,9 @@ function SecondaryNode({ data: rawData }: NodeProps) {
       {data.sublabel && (
         <div className="text-muted-foreground/70 mt-0.5 leading-tight">{String(data.sublabel)}</div>
       )}
-      {data.confidence != null && (
-        <div className="mt-3 flex items-center gap-1.5">
-          <span className={`leading-tight ${confidenceColor(Number(data.confidence))}`}>{Number(data.confidence)}% confidence</span>
-          {!!data.confidenceRaised && (
-            <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-green-500 text-white">
-              <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-            </span>
-          )}
-        </div>
-      )}
+      <div className="mt-2">
+        <span className="text-xs font-medium text-red-500">Possible impact</span>
+      </div>
       <Handle type="source" position={Position.Right} />
     </div>
   )
@@ -419,7 +405,7 @@ export const TEST_RUN_HISTORY: Record<string, TestRun[]> = {
     { timestamp: '2024-09-01 10:18', result: 'passed' },
   ],
   'test-v210': [
-    { timestamp: '2024-11-01 08:55', result: 'passed' },
+    { timestamp: '2024-11-15 11:32', result: 'failed-bug' },
     { timestamp: '2024-10-15 13:20', result: 'failed-bug' },
     { timestamp: '2024-09-30 10:44', result: 'passed' },
     { timestamp: '2024-09-14 15:02', result: 'passed' },
@@ -471,11 +457,11 @@ export const NODE_DRAFTS: Record<string, NodeDraft> = {
   },
   'test-v210': {
     title: 'TEST-V-210 — Drug Library Update Test (Review recommended)',
-    content: `Secondary impact review for REQ-142 rev 3.1.\n\nNote: Agent confidence is 61%. The drug library update flow includes rate validation checks that may reference the enforcement limit indirectly. Manual review recommended to confirm no dependency on the updated boundary value.\n\nIf dependency confirmed: update test inputs to reflect new limit and re-run. If no dependency confirmed: mark as reviewed with no change required.`,
+    content: `Secondary impact review for REQ-142 rev 3.1.\n\nThe drug library update flow includes rate validation checks that may reference the enforcement limit indirectly. Manual review recommended to confirm no dependency on the updated boundary value.\n\nIf dependency confirmed: update test inputs to reflect new limit and re-run. If no dependency confirmed: mark as reviewed with no change required.`,
   },
   'ui-spec088': {
     title: 'UI-SPEC-088 — Rate Entry Screen (Review recommended)',
-    content: `Secondary impact review for REQ-142 rev 3.1.\n\nNote: Agent confidence is 58%. The rate entry screen displays and validates user input against the rate limit. If the limit value is displayed or used as a validation boundary in the UI, the screen specification must be updated to reflect the new value.\n\nRecommended action: confirm whether the rate limit value is hardcoded or read from configuration in the UI layer. Update UI validation logic and display strings if required.`,
+    content: `Secondary impact review for REQ-142 rev 3.1.\n\nThe rate entry screen displays and validates user input against the rate limit. If the limit value is displayed or used as a validation boundary in the UI, the screen specification must be updated to reflect the new value.\n\nRecommended action: confirm whether the rate limit value is hardcoded or read from configuration in the UI layer. Update UI validation logic and display strings if required.`,
   },
   'doc-dhf024': {
     title: 'DOC-DHF-024 — Design History File (Update required)',
@@ -535,9 +521,15 @@ export function Flow({
 
   useEffect(() => {
     if (Object.keys(nodeOverrides).length === 0) return
-    setNodes(nds => nds.map(n =>
-      nodeOverrides[n.id] ? { ...n, data: { ...n.data, ...nodeOverrides[n.id] } } : n
-    ))
+    setNodes(nds => nds.map(n => {
+      if (!nodeOverrides[n.id]) return n
+      const { _type, ...dataOverrides } = nodeOverrides[n.id]
+      return {
+        ...n,
+        ...(typeof _type === 'string' ? { type: _type } : {}),
+        data: { ...n.data, ...dataOverrides },
+      }
+    }))
   }, [nodeOverrides, setNodes])
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
 

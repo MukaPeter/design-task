@@ -11,7 +11,10 @@
       "Bash(npx shadcn@latest add tooltip --yes)",
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(npx tsc *)",
+      "Bash(node -e \"require\\('fs'\\).readFileSync\\('/Users/mukapeter/Desktop/design-task/src/app/traceability/page.tsx', 'utf8'\\)\")",
+      "Bash(ls /Users/mukapeter/Desktop/ | grep -i ketryx)"
     ]
   }
 }
