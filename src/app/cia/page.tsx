@@ -1,17 +1,28 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { DndContext, DragEndEvent } from '@dnd-kit/core'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
 import { GripVertical, Table2, Timeline, X } from 'lucide-react'
 import { Sidebar } from '@/components/sidebar'
 import { Chat } from '@/components/chat'
-import { Flow, NODE_REASONING, DEFAULT_NODES } from '@/components/flow'
+import { Flow, NODE_REASONING, DEFAULT_NODES, TEST_RUN_HISTORY, NODE_DRAFTS, type RunResult } from '@/components/flow'
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import type { Node } from '@xyflow/react'
-import React from 'react'
+import React, { Suspense } from 'react'
+
+// ─── Run result config ────────────────────────────────────────────────────────
+
+const RUN_CONFIG: Record<RunResult, { label: string; dot: string; text: string }> = {
+  'passed':             { label: 'Passed',                   dot: 'bg-green-500',  text: 'text-green-700' },
+  'failed-bug':         { label: 'Failed — bug',             dot: 'bg-red-500',    text: 'text-red-700' },
+  'failed-test-change': { label: 'Failed — test needs update', dot: 'bg-amber-500', text: 'text-amber-700' },
+  'failed-infra':       { label: 'Failed — infra issue',     dot: 'bg-slate-400',  text: 'text-slate-600' },
+}
 
 // ─── Status badge ─────────────────────────────────────────────────────────────
 
@@ -91,13 +102,55 @@ function makePanels(onNodeClick: (node: Node) => void, selectedNodeId: string | 
     'chat-panel': {
       title: 'Ketryx Agent',
       content: <Chat theirName="Ketryx Agent" myName="Peter" placeholder="Ask anything..." onArtifactClick={onArtifactClick} initialMessages={[
-        { id: 1, from: 'me',   text: 'Please run a full change impact analysis for REQ-142, the recent update to the infusion rate limit enforcement algorithm.' },
-        { id: 2, from: 'them', text: 'Analysis complete. I identified 12 affected artifacts across requirements, risk controls, verification tests, and regulatory mappings. Four items are flagged as stale and require immediate attention — RISK-047-A, SPEC-SW-230, and TEST-V-340 are directly invalidated by the algorithm change. I\'ve also surfaced 4 secondary items with lower confidence scores for your review. The impact graph has been populated.' },
+        { id: 1, from: 'me',   text: 'I merged PR #847 (KTX-2047) — updated the infusion rate limit enforcement algorithm. Can you run a full change impact analysis for REQ-142?' },
+        { id: 2, from: 'them', text: 'I detected the merge of PR #847 linked to KTX-2047 and have already started the analysis.\n\nAnalysis complete. The impact graph has been populated.\n\nI identified 12 affected artifacts across requirements, risk controls, verification tests, and regulatory mappings.\n\nFour items are flagged as stale and require immediate attention — RISK-047-A, SPEC-SW-230, and TEST-V-340 are directly invalidated by the algorithm change.\n\nI\'ve also surfaced 4 secondary items with lower confidence scores for your review.' },
       ]} />,
     },
     'flow-panel': {
       title: 'Change Impact Graph',
-      content: <Flow onNodeClick={onNodeClick} selectedNodeId={selectedNodeId} />,
+      content: (
+        <Tabs defaultValue="graph" className="h-full gap-0">
+          <div className="px-4 py-3 border-b shrink-0">
+            <TabsList className="bg-gray-100">
+              <TabsTrigger value="graph" className="text-xs">Graph</TabsTrigger>
+              <TabsTrigger value="table" className="text-xs">Triage</TabsTrigger>
+            </TabsList>
+          </div>
+          <TabsContent value="graph" className="flex-1 min-h-0 mt-0">
+            <Flow onNodeClick={onNodeClick} selectedNodeId={selectedNodeId} />
+          </TabsContent>
+          <TabsContent value="table" className="flex-1 overflow-y-auto mt-0 p-4">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b text-muted-foreground">
+                  <th className="text-left pb-2 font-medium">Artifact</th>
+                  <th className="text-left pb-2 font-medium">Type</th>
+                  <th className="text-left pb-2 font-medium">Status</th>
+                  <th className="text-left pb-2 font-medium">Confidence</th>
+                  <th className="text-left pb-2 font-medium">Impact</th>
+                </tr>
+              </thead>
+              <tbody>
+                {DEFAULT_NODES.map(n => (
+                  <tr
+                    key={n.id}
+                    className="border-b last:border-0 hover:bg-muted/50 cursor-pointer"
+                    onClick={() => onNodeClick(n)}
+                  >
+                    <td className="py-2 font-medium">{String(n.data.label)}</td>
+                    <td className="py-2 text-muted-foreground">{String(n.data.nodeType)}</td>
+                    <td className="py-2"><StatusBadge status={String(n.data.status)} /></td>
+                    <td className={`py-2 font-medium ${Number(n.data.confidence) >= 85 ? 'text-foreground' : Number(n.data.confidence) >= 60 ? 'text-amber-600' : 'text-red-500'}`}>
+                      {n.data.confidence != null ? `${n.data.confidence}%` : '—'}
+                    </td>
+                    <td className="py-2 text-muted-foreground capitalize">{n.type}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </TabsContent>
+        </Tabs>
+      ),
     },
   }
 }
@@ -113,9 +166,23 @@ const LABEL_TO_NODE = Object.fromEntries(
   DEFAULT_NODES.map(n => [String(n.data.label), n])
 )
 
-export default function CIA() {
+const LABEL_TO_ID = Object.fromEntries(
+  DEFAULT_NODES.map(n => [String(n.data.label), n.id])
+)
+
+function CIA() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const [order, setOrder] = useState(['chat-panel', 'flow-panel'])
   const [selectedNode, setSelectedNode] = useState<Node | null>(null)
+
+  useEffect(() => {
+    const nodeId = searchParams.get('node')
+    if (nodeId) {
+      const node = DEFAULT_NODES.find(n => n.id === nodeId)
+      if (node) setSelectedNode(node)
+    }
+  }, [searchParams])
 
   function handleArtifactClick(label: string) {
     const node = LABEL_TO_NODE[label]
@@ -139,7 +206,7 @@ export default function CIA() {
 
   return (
     <div className="flex h-screen bg-background">
-      <Sidebar items={NAV_ITEMS} />
+      <Sidebar items={NAV_ITEMS} activeId="cia" onSelect={id => id === 'traceability' && router.push('/traceability')} />
       <main className="flex-1 overflow-hidden">
         <DndContext id="cia-dnd" onDragEnd={handleDragEnd}>
           <ResizablePanelGroup orientation="horizontal">
@@ -181,27 +248,76 @@ export default function CIA() {
                           </div>
                           <Tabs defaultValue="details" className="flex-1 min-h-0 gap-0">
                             <div className="px-4 py-3 border-b">
-                              <TabsList>
+                              <TabsList className="bg-gray-100">
                                 <TabsTrigger value="details" className="text-xs">Details</TabsTrigger>
+                                {NODE_DRAFTS[node.id] && (
+                                  <TabsTrigger value="draft" className="text-xs">Documentation Draft</TabsTrigger>
+                                )}
                                 <TabsTrigger value="reasoning" className="text-xs">Agent Reasoning</TabsTrigger>
                               </TabsList>
                             </div>
-                            <TabsContent value="details" className="flex-1 overflow-y-auto px-4 py-4 space-y-4 mt-0">
-                              <div>
-                                <div className="text-xs font-medium text-muted-foreground mb-1">Status</div>
-                                <StatusBadge status={String(node.data.status ?? '')} />
-                              </div>
-                              <div className="border-t" />
-                              {Object.entries(node.data)
-                                .filter(([key]) => !['label', 'sublabel', 'nodeType', 'status'].includes(key))
-                                .map(([key, val]) => (
-                                  <div key={key}>
-                                    <div className="text-xs font-medium text-muted-foreground mb-0.5">{key}</div>
-                                    <div className="text-xs text-foreground">{String(val)}</div>
+                            <TabsContent value="details" className="flex-1 flex flex-col min-h-0 mt-0">
+                              <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+                                <div className="flex items-start justify-between">
+                                  <div>
+                                    <div className="text-xs font-medium text-muted-foreground mb-1">Status</div>
+                                    <StatusBadge status={String(node.data.status ?? '')} />
                                   </div>
-                                ))}
+                                  {node.data.confidence != null && (
+                                    <div className="text-right">
+                                      <div className="text-xs font-medium text-muted-foreground mb-1">Agent Confidence</div>
+                                      <div className={`text-sm font-semibold ${Number(node.data.confidence) >= 85 ? 'text-foreground' : Number(node.data.confidence) >= 60 ? 'text-amber-600' : 'text-red-500'}`}>
+                                        {Number(node.data.confidence)}%
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="border-t" />
+                                {Object.entries(node.data)
+                                  .filter(([key]) => !['label', 'sublabel', 'nodeType', 'status', 'confidence'].includes(key))
+                                  .map(([key, val]) => (
+                                    <div key={key}>
+                                      <div className="text-xs font-medium text-muted-foreground mb-0.5">{key}</div>
+                                      {key === 'Jira ticket' || key === 'GitHub PR'
+                                        ? <a href="#" className="text-xs text-primary underline font-medium">{String(val)}</a>
+                                        : <div className="text-xs text-foreground">{String(val)}</div>
+                                      }
+                                    </div>
+                                  ))}
+                                {(() => {
+                                  const runs = TEST_RUN_HISTORY[node.id]
+                                  if (!runs) return null
+                                  return (
+                                    <>
+                                      <div className="border-t" />
+                                      <div>
+                                        <div className="text-xs font-medium text-muted-foreground mb-2">Recent Runs</div>
+                                        <div className="rounded-lg bg-muted/50 overflow-hidden">
+                                          {runs.map((run, i) => {
+                                            const cfg = RUN_CONFIG[run.result]
+                                            return (
+                                              <div key={i} className={`flex items-center justify-between px-3 py-2 ${i < runs.length - 1 ? 'border-b border-border/50' : ''}`}>
+                                                <div className="flex items-center gap-2">
+                                                  <span className={`w-2 h-2 rounded-full shrink-0 ${cfg.dot}`} />
+                                                  <span className={`text-xs font-medium ${cfg.text}`}>{cfg.label}</span>
+                                                </div>
+                                                <a href="#" className="text-xs text-primary hover:underline">{run.timestamp}</a>
+                                              </div>
+                                            )
+                                          })}
+                                        </div>
+                                      </div>
+                                    </>
+                                  )
+                                })()}
+                              </div>
+                              <div className="shrink-0 border-t px-4 py-3 flex gap-2 justify-end">
+                                <Button size="sm">Accept</Button>
+                                <Button variant="outline" size="sm">Reject</Button>
+                              </div>
                             </TabsContent>
-                            <TabsContent value="reasoning" className="flex-1 overflow-y-auto px-4 py-6 mt-0 space-y-8">
+                            <TabsContent value="reasoning" className="flex-1 flex flex-col min-h-0 mt-0">
+                            <div className="flex-1 overflow-y-auto px-4 py-6 space-y-8">
                               {(() => {
                                 const r = NODE_REASONING[node.id]
                                 if (!r) return <div className="text-xs text-muted-foreground">No reasoning available.</div>
@@ -212,14 +328,38 @@ export default function CIA() {
                                       <div className="text-xs font-semibold text-foreground mb-2">Tools used</div>
                                       <div className="space-y-3">
                                         {r.tools.map((t, i) => (
-                                          <div key={i} className="rounded-md bg-muted px-3 py-3 space-y-1.5">
+                                          <div key={i} className="rounded-md bg-gray-100 px-3 py-3 space-y-1.5">
                                             <div className="text-xs font-mono text-foreground">{t.call}</div>
                                             <div className="text-xs text-muted-foreground">{t.resultText}</div>
                                             {t.links && t.links.length > 0 && (
-                                              <div className="flex flex-col gap-0.5 pt-0.5">
-                                                {t.links.map((link, j) => (
-                                                  <span key={j} className="text-xs text-primary cursor-pointer hover:underline">{link}</span>
-                                                ))}
+                                              <div className="flex flex-col gap-2 pt-1">
+                                                {t.links.map((link, j) => {
+                                                  const runs = TEST_RUN_HISTORY[LABEL_TO_ID[link]]
+                                                  return (
+                                                    <div key={j} className="flex items-center justify-between">
+                                                      <span className="text-xs text-primary cursor-pointer hover:underline">{link}</span>
+                                                      {runs && (
+                                                        <TooltipProvider>
+                                                          <div className="flex items-center gap-1">
+                                                            {runs.map((run, k) => {
+                                                              const cfg = RUN_CONFIG[run.result]
+                                                              return (
+                                                                <Tooltip key={k}>
+                                                                  <TooltipTrigger>
+                                                                    <span className={`w-2.5 h-2.5 rounded-full ${cfg.dot} cursor-default inline-block`} />
+                                                                  </TooltipTrigger>
+                                                                  <TooltipContent>
+                                                                    <span>{run.timestamp} — {cfg.label}</span>
+                                                                  </TooltipContent>
+                                                                </Tooltip>
+                                                              )
+                                                            })}
+                                                          </div>
+                                                        </TooltipProvider>
+                                                      )}
+                                                    </div>
+                                                  )
+                                                })}
                                               </div>
                                             )}
                                           </div>
@@ -256,7 +396,35 @@ export default function CIA() {
                                   </>
                                 )
                               })()}
+                            </div>
+                            <div className="shrink-0 border-t px-4 py-3 flex justify-end">
+                              <Button size="sm">Re-analyse</Button>
+                            </div>
                             </TabsContent>
+                            {NODE_DRAFTS[node.id] && (() => {
+                              const draft = NODE_DRAFTS[node.id]!
+                              return (
+                                <TabsContent value="draft" className="flex-1 flex flex-col min-h-0 mt-0">
+                                  <div className="flex-1 overflow-y-auto px-4 py-4">
+                                    <div className="text-xs text-muted-foreground mb-4 flex items-center gap-1.5">
+                                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-400" />
+                                      Agent-generated draft — review before approving
+                                    </div>
+                                    <div className="rounded-lg border bg-gray-50 px-4 py-4 space-y-3">
+                                      <div className="text-xs font-semibold text-foreground">{draft.title}</div>
+                                      <div className="border-t" />
+                                      {draft.content.split('\n\n').map((para, i) => (
+                                        <p key={i} className="text-xs text-foreground leading-relaxed">{para}</p>
+                                      ))}
+                                    </div>
+                                  </div>
+                                  <div className="shrink-0 border-t px-4 py-3 flex gap-2 justify-end">
+                                    <Button variant="outline" size="sm">Request changes</Button>
+                                    <Button size="sm">Approve draft</Button>
+                                  </div>
+                                </TabsContent>
+                              )
+                            })()}
                           </Tabs>
                         </div>
                       </ResizablePanel>
@@ -269,5 +437,13 @@ export default function CIA() {
         </DndContext>
       </main>
     </div>
+  )
+}
+
+export default function CIAPage() {
+  return (
+    <Suspense>
+      <CIA />
+    </Suspense>
   )
 }

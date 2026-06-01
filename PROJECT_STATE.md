@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: 2026-05-31
+Last updated: 2026-06-01
 
 This document captures the current state of the project so any new session can pick up exactly where we left off.
 
@@ -58,6 +58,32 @@ Sidebar | Panel (Tab A / Tab B)
 
 ---
 
+### `/traceability`
+Traceability Matrix page. Entry point — links into the CIA drill-down.
+
+**Layout:**
+```
+Sidebar | Ketryx Agent (18%) | Handle | Matrix panel (82%)
+```
+
+**Sidebar nav:** active item = Traceability Matrix. Clicking Impact Analysis Graph navigates to `/cia`.
+
+**Matrix:**
+- Rows: 8 requirements (REQ-142 + 2 real upstream + 5 static extras)
+- Columns: all non-requirement nodes from `DEFAULT_NODES` (artifacts)
+- Cells: colored dot where a traceability link exists (green/amber/red by artifact status)
+- Only REQ-142 row is clickable → navigates to `/cia`
+- Other rows are `opacity-60`, not clickable
+- Clicking a dot navigates to `/cia?node=<nodeId>` (pre-selects that node + opens detail panel)
+- Sticky first column with group-hover background sync
+- Plain `<table>` (not shadcn Table) with `minWidth` computed from artifact count — needed for horizontal scroll
+- Matrix panel uses `style={{ overflow: 'auto' }}` on ResizablePanel — required because react-resizable-panels sets `overflow: hidden` by default
+- 5 extra static requirements (REQ-031, REQ-058, REQ-110, REQ-175, REQ-220) defined locally in the page, not in `flow.tsx`
+
+**Chat:** pre-populated agent message explaining the matrix and prompting drill-down on red rows.
+
+---
+
 ### `/cia` ← active work
 Change Impact Analysis page. Fully built prototype.
 
@@ -67,52 +93,57 @@ Sidebar | Ketryx Agent (15%) | Handle | Change Impact Graph (~85%) | Handle | De
 ```
 
 **Sidebar nav:**
-- Traceability Matrix (`Table2` icon)
-- Impact Analysis Graph (`Timeline` icon)
+- Traceability Matrix (`Table2` icon) → navigates to `/traceability`
+- Impact Analysis Graph (`Timeline` icon) → active on this page
+
+**Navigation:** `useSearchParams` reads `?node=<id>` on mount and pre-selects that node. Wrapped in `<Suspense>` (required by Next.js for `useSearchParams`).
 
 ---
 
 #### Ketryx Agent panel
 - 15% default width, 12% min
-- Pre-populated chat: Peter's request + Ketryx Agent response
-- Chat bubbles: Peter = blue (bg-primary), Ketryx Agent = gray (bg-gray-100)
-- Sender names shown inside bubble (Peter / Ketryx Agent)
-- Artifact IDs in agent messages (REQ-xxx, RISK-xxx, etc.) are blue underlined links — clicking opens the detail panel for that node
-- `text-xs leading-relaxed` for bubble text
+- Chat conversation starts with Peter referencing PR #847 (KTX-2047) triggering the analysis
+- Agent response references PR #847 and KTX-2047 as clickable links, plus artifact ID links
+- `PR #\d+` and `KTX-\d+` patterns linkified in chat via `LINK_RE` in `chat.tsx`
+- Agent message broken into paragraphs via `\n\n`
 - Both panels have GripVertical drag handles — drag to swap positions
 
 ---
 
 #### Change Impact Graph panel
-- xyflow canvas, `smoothstep` edges
-- `defaultViewport={{ x: 80, y: 80, zoom: 0.9 }}` (no fitView)
-- Two custom node types:
-  - `primary` — black border, confirmed impacted artifacts
-  - `secondary` — gray border, agent-suggested "check these" items
-- Both node types show: label (text-sm semibold) + sublabel + confidence score (colored by band)
-- Hover state: blue border + `bg-primary/10` background
-- Selected state: 3px blue border, white background
-- Status dot (top-right, inline): green = up-to-date, amber = needs-review, red = stale (primary nodes only)
-- Confidence score color bands: ≥85% = muted (not a focus), 60–84% = amber-600, <60% = red-500
-- Primary edges: black with arrowheads
-- Secondary edges: gray dashed + animated
-- Clicking a node opens the detail panel (same node click again = closes)
-- Closing detail panel deselects the node in xyflow
+- Two tabs: **Graph** and **Triage**
+- Tab list uses `bg-gray-100`
+- **Graph tab:** xyflow canvas, `smoothstep` edges
+  - REQ-142 is the root node — no upstream nodes. Everything flows downstream.
+  - `defaultViewport={{ x: 80, y: 80, zoom: 0.9 }}` (no fitView)
+  - Two custom node types:
+    - `primary` — black border, confirmed impacted artifacts
+    - `secondary` — gray border, agent-suggested "check these" items
+  - Both node types show: label (text-sm semibold) + sublabel + confidence score (colored by band)
+  - Hover state: blue border + `bg-primary/10` background
+  - Selected state: 3px blue border, white background
+  - Status dot (top-right, inline): green = up-to-date, amber = needs-review, red = stale
+  - Confidence score color bands: ≥85% = muted, 60–84% = amber-600, <60% = red-500
+  - Primary edges: black with arrowheads
+  - Secondary edges: gray dashed + animated
+  - Clicking a node opens the detail panel (same node click again = closes)
+- **Triage tab:** table view of all nodes — Artifact, Type, Status badge, Confidence, Impact. Clicking a row opens the detail panel.
 
 **CIA scenario: REQ-142 — Infusion Rate Limit Enforcement change**
-- 12 primary nodes + 4 secondary nodes
-- Flows left to right: upstream reqs → REQ-142 → hazard / risk controls / design spec → tests → SOP → regulatory clauses
+- REQ-142 is the origin (Jira: KTX-2047, GitHub PR: #847)
+- 14 downstream nodes (removed REQ-085, REQ-201 upstream nodes)
 - Secondary nodes: SPEC-HW-105, TEST-V-210, UI-SPEC-088, DOC-DHF-024
 
 ---
 
 #### Detail panel (conditional, always adjacent to flow panel)
-- Appears when a graph node is clicked
-- Always renders immediately next to the flow panel regardless of drag order
+- Appears when a graph node is clicked, Triage row clicked, or navigated to via `?node=` param
 - Header: node label + artifact type + X close button
-- Two tabs (shadcn Tabs):
-  - **Details** — status badge + type-specific artifact fields
-  - **Agent Reasoning** — tools used (with blue artifact links), reasoning text, confidence explanation, ruled-out items
+- Three tabs (shadcn Tabs), tab list uses `bg-gray-100`:
+  - **Details** — Status badge (left) + Agent Confidence % (right, color-coded). Fields below — `Jira ticket` and `GitHub PR` fields render as `<a>` links. For test nodes: Recent Runs section (last 5, colored dot + result label + clickable timestamp link). Footer: Accept (primary) + Reject (outline), right-aligned.
+  - **Documentation Draft** — shown only on nodes where docs are the output (Risk Control, Design Spec, Verification Test, SOP, Regulatory Clause, Documentation). Agent-generated draft in a `bg-gray-50` document container. Footer: Request changes (outline) + Approve draft (primary), right-aligned.
+  - **Agent Reasoning** — tool call cards (`bg-gray-100`). Test artifact links show 5 run history dots inline right, with shadcn Tooltip on hover. Below: Reasoning, Confidence explanation, Ruled-out items. Footer: Re-analyse (primary), right-aligned.
+- Tab order: Details → Documentation Draft (if available) → Agent Reasoning
 - Status badge colors: green (up-to-date), amber (needs-review), red (stale)
 
 ---
@@ -120,7 +151,7 @@ Sidebar | Ketryx Agent (15%) | Handle | Change Impact Graph (~85%) | Handle | De
 #### Panel drag-to-swap
 - Both Ketryx Agent and Change Impact Graph panels have GripVertical drag handles
 - DndContext wraps the group — dragging swaps the two main panels
-- Detail panel always stays adjacent to the flow panel (never between chat and flow)
+- Detail panel always stays adjacent to the flow panel
 
 ---
 
@@ -128,10 +159,13 @@ Sidebar | Ketryx Agent (15%) | Handle | Change Impact Graph (~85%) | Handle | De
 
 All CIA data lives in `flow.tsx` and is exported:
 
-- `DEFAULT_NODES` — 16 nodes with full mock data per node type (status, confidence, artifact fields)
-- `DEFAULT_EDGES` — 17 edges (primary black + secondary dashed)
+- `DEFAULT_NODES` — 14 nodes (removed REQ-085, REQ-201). REQ-142 is root with `Jira ticket` and `GitHub PR` fields.
+- `DEFAULT_EDGES` — edges (primary black + secondary dashed). No upstream edges.
 - `NODE_REASONING` — per-node agent reasoning: tools used (call + resultText + links[]), reasoning text, confidence explanation, ruled-out items
 - `NODE_TYPES` — `{ primary: PrimaryNode, secondary: SecondaryNode }`
+- `TEST_RUN_HISTORY` — mock run history for test nodes (test-v340, test-v341, test-v210). `RunResult` = `'passed' | 'failed-bug' | 'failed-test-change' | 'failed-infra'`
+- `NODE_DRAFTS` — agent-generated documentation drafts for 12 nodes (Risk Controls, Design Specs, Tests, SOP, Regulatory Clauses, Documentation). Not shown on Requirements or Hazards.
+- `RUN_CONFIG` — in `cia/page.tsx`: maps RunResult to `{ label, dot, text }`
 
 ---
 
@@ -139,12 +173,13 @@ All CIA data lives in `flow.tsx` and is exported:
 
 | Component | File | What changed |
 |---|---|---|
-| Button | `ui/button.tsx` | Added `nav` size variant (`text-sm`, full-width, left-aligned) |
+| Button | `ui/button.tsx` | Added `nav` size variant |
 | ResizableHandle | `ui/resizable.tsx` | Added hover highlight — line + grip pill |
-| Panel | `components/panel.tsx` | Custom: Card + Tabs + dnd-kit drag handle. `gap-0` on Tabs |
-| Sidebar | `components/sidebar.tsx` | Custom: 3-state, two-layer pattern, ghost hover → `#F5F5F5` |
-| Chat | `components/chat.tsx` | Added `theirName`, `myName`, `onArtifactClick`; artifact ID linkification; sender name in bubble |
-| Flow | `components/flow.tsx` | Full CIA scenario data, custom node types, confidence colors, status dots, `onNodeClick`, `selectedNodeId` sync |
+| Panel | `components/panel.tsx` | Custom: Card + Tabs + dnd-kit drag handle |
+| Sidebar | `components/sidebar.tsx` | Custom: 3-state, `onSelect` callback for navigation |
+| Chat | `components/chat.tsx` | `theirName`, `myName`, `onArtifactClick`; artifact + PR + Jira linkification; multi-paragraph via `\n\n` |
+| Flow | `components/flow.tsx` | Full CIA data, `DEFAULT_EDGES` exported, `TEST_RUN_HISTORY`, `NODE_DRAFTS` |
+| Tooltip | `ui/tooltip.tsx` | Added via shadcn (base-ui). Run history dot tooltips in Agent Reasoning |
 
 ---
 
@@ -154,7 +189,6 @@ All CIA data lives in `flow.tsx` and is exported:
 |---|---|---|
 | Sidebar nav items | 14px | `text-sm` |
 | Tab labels | 12px | `text-xs` |
-| Tree list rows | 12px | `text-xs` |
 | Panel headers | 14px | `text-sm font-semibold` |
 | Graph node label | 14px | `text-sm font-semibold` |
 | Graph node sublabel + confidence | 12px | `text-xs` |
@@ -168,9 +202,11 @@ All CIA data lives in `flow.tsx` and is exported:
 | Use | Value | Where |
 |---|---|---|
 | Hover on sidebar inactive items | `#F5F5F5` | `sidebar.tsx` |
-| Hover on tree rows | `#F5F5F5` | `demo2/page.tsx` TreeNode |
-| Selected tree row background | `bg-primary/10` | `demo2/page.tsx` TreeNode |
 | Ketryx Agent chat bubble | `bg-gray-100` | `chat.tsx` |
+| Detail panel tab list | `bg-gray-100` | `cia/page.tsx` |
+| Graph panel tab list | `bg-gray-100` | `cia/page.tsx` |
+| Agent Reasoning tool call cards | `bg-gray-100` | `cia/page.tsx` |
+| Documentation draft container | `bg-gray-50` | `cia/page.tsx` |
 | Confidence high (≥85%) | `text-muted-foreground` | `flow.tsx` |
 | Confidence medium (60–84%) | `text-amber-600` | `flow.tsx` |
 | Confidence low (<60%) | `text-red-500` | `flow.tsx` |
@@ -182,29 +218,41 @@ All CIA data lives in `flow.tsx` and is exported:
 ```
 src/
   app/
-    demo/page.tsx         ← two-panel reference (do not modify)
-    demo2/page.tsx        ← token management UI
-    cia/page.tsx          ← change impact analysis (active)
+    demo/page.tsx           ← two-panel reference (do not modify)
+    demo2/page.tsx          ← token management UI
+    cia/page.tsx            ← change impact analysis (active)
+    traceability/page.tsx   ← traceability matrix (entry point)
   components/
-    sidebar.tsx           ← 3-state sidebar (isolated, stable)
-    panel.tsx             ← tabs + drag handle card
-    chat.tsx              ← chat UI component (modified)
-    flow.tsx              ← xyflow canvas + full CIA data (modified)
+    sidebar.tsx             ← 3-state sidebar, onSelect navigation
+    panel.tsx               ← tabs + drag handle card
+    chat.tsx                ← chat UI, artifact + PR + Jira linkification
+    flow.tsx                ← xyflow canvas + all CIA data
     ui/
-      button.tsx          ← modified: nav variant
-      resizable.tsx       ← modified: hover highlight
+      button.tsx            ← modified: nav variant
+      resizable.tsx         ← modified: hover highlight
+      tooltip.tsx           ← added via shadcn
 
-mds/                      ← learnings per library
-custom_components/        ← modified + custom components with docs
-CLAUDE.md                 ← working rules for Claude
-PROJECT_STATE.md          ← this file
+mds/                        ← learnings per library
+custom_components/          ← modified + custom components with docs
+CLAUDE.md                   ← working rules for Claude
+PROJECT_STATE.md            ← this file
 ```
 
 ---
 
-## What's next (cia page)
+## Navigation flow
 
-- Add "Re-analyse" button to the Agent Reasoning tab
-- Consider highlighting graph nodes from chat interaction (e.g. agent response mentions a node → it glows)
+```
+/traceability  →  click REQ-142 row  →  /cia
+/traceability  →  click a dot        →  /cia?node=<id>  (detail panel pre-opened)
+/cia           →  sidebar nav        →  /traceability
+```
+
+---
+
+## What's next
+
+- Consider highlighting graph nodes when agent mentions them in chat
 - Consider a legend for node types / status dots / confidence bands
+- Triage table: add sorting / filtering
 - Push to Vercel when ready

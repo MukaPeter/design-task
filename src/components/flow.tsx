@@ -98,26 +98,13 @@ export interface FlowProps {
 // ─── CIA scenario data ────────────────────────────────────────────────────────
 
 export const DEFAULT_NODES: Node[] = [
-  // Upstream requirements
-  {
-    id: 'req-085', type: 'primary', position: { x: 40, y: 60 },
-    data: { label: 'REQ-085', sublabel: 'Drug Library Safety Limits', nodeType: 'Requirement', status: 'needs-review', confidence: 78,
-      Description: 'Defines maximum safe infusion rates per drug formulation in the library',
-      Version: 'v1.4', Owner: 'S. Park', Regulation: 'IEC 62304 §5.2' },
-  },
-  {
-    id: 'req-201', type: 'primary', position: { x: 40, y: 200 },
-    data: { label: 'REQ-201', sublabel: 'User Input Validation', nodeType: 'Requirement', status: 'up-to-date', confidence: 91,
-      Description: 'Validates user dose entry against safety bounds before confirmation',
-      Version: 'v1.1', Owner: 'S. Park', Regulation: 'IEC 62304 §5.2' },
-  },
-
   // Root — changed requirement
   {
     id: 'req-142', type: 'primary', position: { x: 280, y: 130 },
     data: { label: 'REQ-142', sublabel: 'Rate Limit Enforcement', nodeType: 'Requirement', status: 'stale', confidence: 97,
       Description: 'Algorithm enforcing maximum infusion rate (mL/hr) per drug profile',
-      Version: 'v2.1 → v2.2 (pending)', Owner: 'J. Müller', Regulation: 'IEC 62304 §5.3' },
+      Version: 'v2.1 → v2.2 (pending)', Owner: 'J. Müller', Regulation: 'IEC 62304 §5.3',
+      'Jira ticket': 'KTX-2047', 'GitHub PR': '#847' },
   },
 
   // Direct impacts
@@ -394,11 +381,94 @@ export const NODE_REASONING: Record<string, NodeReasoning> = {
   },
 }
 
-const DEFAULT_EDGES: Edge[] = [
-  // Upstream into root
-  { id: 'e1', source: 'req-085', target: 'req-142', type: 'smoothstep', label: 'input to',    style: { stroke: '#000' }, markerEnd: { type: 'arrowclosed', color: '#000' } },
-  { id: 'e2', source: 'req-201', target: 'req-142', type: 'smoothstep', label: 'related to',  style: { stroke: '#000' }, markerEnd: { type: 'arrowclosed', color: '#000' } },
+export type RunResult = 'passed' | 'failed-bug' | 'failed-test-change' | 'failed-infra'
 
+export interface TestRun {
+  timestamp: string
+  result: RunResult
+}
+
+export const TEST_RUN_HISTORY: Record<string, TestRun[]> = {
+  'test-v340': [
+    { timestamp: '2024-11-03 14:22', result: 'failed-test-change' },
+    { timestamp: '2024-10-18 09:41', result: 'passed' },
+    { timestamp: '2024-10-02 11:05', result: 'passed' },
+    { timestamp: '2024-09-17 16:33', result: 'passed' },
+    { timestamp: '2024-09-01 10:12', result: 'failed-infra' },
+  ],
+  'test-v341': [
+    { timestamp: '2024-11-03 14:25', result: 'passed' },
+    { timestamp: '2024-10-18 09:45', result: 'passed' },
+    { timestamp: '2024-10-02 11:10', result: 'passed' },
+    { timestamp: '2024-09-17 16:38', result: 'passed' },
+    { timestamp: '2024-09-01 10:18', result: 'passed' },
+  ],
+  'test-v210': [
+    { timestamp: '2024-11-01 08:55', result: 'passed' },
+    { timestamp: '2024-10-15 13:20', result: 'failed-bug' },
+    { timestamp: '2024-09-30 10:44', result: 'passed' },
+    { timestamp: '2024-09-14 15:02', result: 'passed' },
+    { timestamp: '2024-08-29 09:30', result: 'failed-infra' },
+  ],
+}
+
+export interface NodeDraft {
+  title: string
+  content: string
+}
+
+export const NODE_DRAFTS: Record<string, NodeDraft> = {
+  'risk-047a': {
+    title: 'RISK-047-A — Rate Limit Control (Revised)',
+    content: `Risk Control: Software enforcement of maximum infusion rate limit.\n\nRevised control statement: The software shall enforce an absolute upper infusion rate limit of [NEW_LIMIT] mL/hr as defined in REQ-142 rev 3.1. Any attempted programming above this limit shall be rejected by the system and an audible/visual alert shall be triggered.\n\nVerification method: Boundary value testing per TEST-V-340 (updated). Re-verification required against REQ-142 rev 3.1 before change closure.\n\nRisk acceptability: Residual risk remains acceptable provided re-verification passes. Risk owner: Systems Engineering.`,
+  },
+  'risk-047b': {
+    title: 'RISK-047-B — Alarm on Violation (Review note)',
+    content: `Risk Control: Alarm triggered on rate limit violation.\n\nThe alarm mechanism operates independently of the enforcement algorithm. No changes to alarm logic are required as a result of REQ-142 rev 3.1.\n\nConfirmation required: QA to confirm alarm threshold parameters remain within tolerance after enforcement algorithm update. Evidence: TEST-V-341 last run 2024-11-03 — passed.`,
+  },
+  'spec-sw230': {
+    title: 'SPEC-SW-230 — Rate Limiter Software Design (Revised)',
+    content: `Section 4.2 — Rate Limit Enforcement Module\n\nRevised design: The rate limiter module shall implement the updated enforcement algorithm as specified in REQ-142 rev 3.1. The enforcement boundary shall be parameterised and read from the device configuration store at startup.\n\nAffected modules: RateLimiterCore.c, ConfigManager.c\nInterfaces: No changes to external hardware interfaces (confirmed SPEC-HW-105 unaffected).\n\nChange justification: Algorithm update required to address clinical feedback on rate precision at boundary values. Full impact assessed via CIA-2024-047.`,
+  },
+  'test-v340': {
+    title: 'TEST-V-340 — Rate Limit Boundary Test (Updated)',
+    content: `Test protocol update for REQ-142 rev 3.1.\n\nTest objective: Verify the infusion pump rejects all rate inputs above the revised limit and accepts all inputs at or below it.\n\nUpdated boundary values: [NEW_LIMIT] mL/hr ± 0.1 mL/hr. Previous boundary values are no longer valid.\n\nTest cases to update:\n- TC-340-01: Input at exact limit → expect ACCEPT\n- TC-340-02: Input at limit + 0.1 → expect REJECT + alert\n- TC-340-03: Input at limit − 0.1 → expect ACCEPT\n\nRe-run required before change closure. Tester: QA Lab.`,
+  },
+  'test-v341': {
+    title: 'TEST-V-341 — Overdose Prevention Test (No change required)',
+    content: `Test protocol review for REQ-142 rev 3.1 impact.\n\nConclusion: No update required. TEST-V-341 validates the alarm and pump-stop behaviour on limit breach. This logic is implemented independently of the enforcement algorithm (RISK-047-B confirmed unaffected).\n\nLast run: 2024-11-03 — Passed. Evidence remains valid. No re-run required unless alarm threshold parameters are modified.`,
+  },
+  'sop-qms015': {
+    title: 'SOP-QMS-015 — Software Change Control (Update required)',
+    content: `Section 6.3 — Impact Assessment for Safety-Critical Changes\n\nAddendum: Changes to enforcement algorithm parameters (e.g. rate limit values) are classified as safety-critical and require a full CIA prior to implementation. The CIA output must include: affected artifact list, agent confidence scores, and human acceptance record for each impacted item.\n\nThis addendum applies retroactively to CIA-2024-047 (REQ-142 rev 3.1). Change control record to be updated by QA before submission.`,
+  },
+  'iec-62304': {
+    title: 'IEC 62304 §5.3 — Compliance Justification (Updated)',
+    content: `Standard: IEC 62304:2006+AMD1:2015, §5.3 Software Detailed Design\n\nCompliance statement: SPEC-SW-230 rev 3.1 (in progress) will constitute the detailed design evidence for the rate limiter module following the REQ-142 change. Compliance is currently under review pending SPEC-SW-230 revision approval.\n\nExpected closure: Upon approval of SPEC-SW-230 rev 3.1 and successful re-run of TEST-V-340. Regulatory traceability record to be updated in DHF (DOC-DHF-024).`,
+  },
+  'iso-14971': {
+    title: 'ISO 14971 §6.3 — Risk Control Verification (Updated)',
+    content: `Standard: ISO 14971:2019, §6.3 Verification of implementation and effectiveness of risk controls\n\nCompliance gap: RISK-047-A re-verification is pending. Current evidence (TEST-V-340, last run 2024-11-03 against v2.1) is no longer valid following REQ-142 rev 3.1.\n\nRequired action: Re-run TEST-V-340 against updated boundary values. Upon pass, update risk control effectiveness record and residual risk acceptance in the Risk Management File. Responsible: Systems Engineering + QA.`,
+  },
+  'spec-hw105': {
+    title: 'SPEC-HW-105 — Motor Controller Interface (No change required)',
+    content: `Interface review for REQ-142 rev 3.1 impact.\n\nConclusion: No update required. The motor controller interface specification is not dependent on the software enforcement algorithm. Rate commands are passed via the existing API without modification.\n\nReview basis: check_interface_spec confirmed no direct dependency. No changes to SPEC-HW-105 required for this change.`,
+  },
+  'test-v210': {
+    title: 'TEST-V-210 — Drug Library Update Test (Review recommended)',
+    content: `Secondary impact review for REQ-142 rev 3.1.\n\nNote: Agent confidence is 61%. The drug library update flow includes rate validation checks that may reference the enforcement limit indirectly. Manual review recommended to confirm no dependency on the updated boundary value.\n\nIf dependency confirmed: update test inputs to reflect new limit and re-run. If no dependency confirmed: mark as reviewed with no change required.`,
+  },
+  'ui-spec088': {
+    title: 'UI-SPEC-088 — Rate Entry Screen (Review recommended)',
+    content: `Secondary impact review for REQ-142 rev 3.1.\n\nNote: Agent confidence is 58%. The rate entry screen displays and validates user input against the rate limit. If the limit value is displayed or used as a validation boundary in the UI, the screen specification must be updated to reflect the new value.\n\nRecommended action: confirm whether the rate limit value is hardcoded or read from configuration in the UI layer. Update UI validation logic and display strings if required.`,
+  },
+  'doc-dhf024': {
+    title: 'DOC-DHF-024 — Design History File (Update required)',
+    content: `Design History File update for CIA-2024-047 (REQ-142 rev 3.1).\n\nArtifacts to be added or updated in this DHF entry:\n- REQ-142 rev 3.1 (change origin)\n- SPEC-SW-230 rev 3.1 (design evidence)\n- TEST-V-340 updated protocol + new run results\n- RISK-047-A re-verification record\n- ISO 14971 §6.3 residual risk acceptance\n- IEC 62304 §5.3 compliance confirmation\n- SOP-QMS-015 addendum\n- CIA-2024-047 acceptance record (this document)\n\nDHF update owner: Regulatory Affairs. Target closure: upon acceptance of all primary artifacts.`,
+  },
+}
+
+export const DEFAULT_EDGES: Edge[] = [
   // Root → direct impacts
   { id: 'e3', source: 'req-142', target: 'haz-047',    type: 'smoothstep', label: 'addresses',   style: { stroke: '#000' }, markerEnd: { type: 'arrowclosed', color: '#000' } },
   { id: 'e4', source: 'req-142', target: 'risk-047a',  type: 'smoothstep', label: 'fulfills',    style: { stroke: '#000' }, markerEnd: { type: 'arrowclosed', color: '#000' } },
@@ -420,7 +490,7 @@ const DEFAULT_EDGES: Edge[] = [
 
   // Secondary suggestions (dashed)
   { id: 'e14', source: 'spec-sw230', target: 'spec-hw105', type: 'smoothstep', animated: true, style: { strokeDasharray: '5 5', stroke: '#aaa' } },
-  { id: 'e15', source: 'req-085',    target: 'test-v210',  type: 'smoothstep', animated: true, style: { strokeDasharray: '5 5', stroke: '#aaa' } },
+  { id: 'e15', source: 'req-142',    target: 'test-v210',  type: 'smoothstep', animated: true, style: { strokeDasharray: '5 5', stroke: '#aaa' } },
   { id: 'e16', source: 'req-142',    target: 'ui-spec088', type: 'smoothstep', animated: true, style: { strokeDasharray: '5 5', stroke: '#aaa' } },
   { id: 'e17', source: 'iso-14971',  target: 'dhf-024',    type: 'smoothstep', animated: true, style: { strokeDasharray: '5 5', stroke: '#aaa' } },
 ]

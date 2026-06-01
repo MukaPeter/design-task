@@ -23,23 +23,40 @@ export interface ChatProps {
 }
 
 const ARTIFACT_RE = /\b(REQ|RISK|SPEC|TEST|HAZ|SOP|DOC)[-][A-Z0-9]+(?:[-][A-Z0-9]+)*/g
+const LINK_RE = /\b(PR\s*#\d+|KTX-\d+)/g
 
-function MessageText({ text, onArtifactClick }: { text: string; onArtifactClick?: (id: string) => void }) {
-  if (!onArtifactClick) return <>{text}</>
+function renderParagraph(text: string, onArtifactClick?: (id: string) => void): React.ReactNode {
+  const combined = new RegExp(`${ARTIFACT_RE.source}|${LINK_RE.source}`, 'g')
   const parts: React.ReactNode[] = []
   let last = 0
   let match: RegExpExecArray | null
-  ARTIFACT_RE.lastIndex = 0
-  while ((match = ARTIFACT_RE.exec(text)) !== null) {
+  while ((match = combined.exec(text)) !== null) {
     if (match.index > last) parts.push(text.slice(last, match.index))
-    const id = match[0]
-    parts.push(
-      <span key={match.index} className="text-primary underline cursor-pointer font-medium" onClick={() => onArtifactClick(id)}>{id}</span>
-    )
-    last = match.index + id.length
+    const token = match[0]
+    if (LINK_RE.test(token)) {
+      parts.push(<a key={match.index} href="#" className="text-primary underline font-medium">{token}</a>)
+    } else if (onArtifactClick) {
+      parts.push(<span key={match.index} className="text-primary underline cursor-pointer font-medium" onClick={() => onArtifactClick(token)}>{token}</span>)
+    } else {
+      parts.push(token)
+    }
+    last = match.index + token.length
+    LINK_RE.lastIndex = 0
   }
   if (last < text.length) parts.push(text.slice(last))
   return <>{parts}</>
+}
+
+function MessageText({ text, onArtifactClick }: { text: string; onArtifactClick?: (id: string) => void }) {
+  const paragraphs = text.split('\n\n').filter(Boolean)
+  if (paragraphs.length <= 1) return <>{renderParagraph(text, onArtifactClick)}</>
+  return (
+    <div className="space-y-2">
+      {paragraphs.map((p, i) => (
+        <p key={i}>{renderParagraph(p, onArtifactClick)}</p>
+      ))}
+    </div>
+  )
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
