@@ -510,6 +510,15 @@ export const DEFAULT_EDGES: Edge[] = [
   { id: 'e17', source: 'iso-14971',  target: 'dhf-024',    type: 'smoothstep', animated: true, style: { strokeDasharray: '5 5', stroke: '#aaa' } },
 ]
 
+// ─── Chat messages ────────────────────────────────────────────────────────────
+
+import type { ChatMessage } from '@/components/chat'
+
+export const INITIAL_CHAT_MESSAGES: ChatMessage[] = [
+  { id: 1, from: 'me',   text: 'I merged PR #847 (KTX-2047) — updated the infusion rate limit enforcement algorithm. Can you run a full downstream change impact analysis for REQ-142?' },
+  { id: 2, from: 'them', text: 'I detected the merge of PR #847 linked to KTX-2047 and have already started the analysis.\n\nDownstream Impact Analysis complete. The impact graph has been populated.\n\nI identified 12 affected artifacts across requirements, risk controls, verification tests, and regulatory mappings.\n\nFour items are flagged as stale and require immediate attention — RISK-047-A, SPEC-SW-230, and TEST-V-340 are directly invalidated by the algorithm change.\n\nI\'ve also surfaced 4 secondary items with lower confidence scores for your review.' },
+]
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function Flow({

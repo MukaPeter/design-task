@@ -7,7 +7,7 @@ import { useDraggable, useDroppable } from '@dnd-kit/core'
 import { GripVertical, Table2, Timeline, X } from 'lucide-react'
 import { Sidebar } from '@/components/sidebar'
 import { Chat } from '@/components/chat'
-import { Flow, NODE_REASONING, DEFAULT_NODES, DEFAULT_EDGES, TEST_RUN_HISTORY, NODE_DRAFTS, type RunResult } from '@/components/flow'
+import { Flow, NODE_REASONING, DEFAULT_NODES, DEFAULT_EDGES, TEST_RUN_HISTORY, NODE_DRAFTS, INITIAL_CHAT_MESSAGES, type RunResult } from '@/components/flow'
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
@@ -185,17 +185,19 @@ const LABEL_TO_ID = Object.fromEntries(
   DEFAULT_NODES.map(n => [String(n.data.label), n.id])
 )
 
-const INITIAL_MESSAGES: import('@/components/chat').ChatMessage[] = [
-  { id: 1, from: 'me',   text: 'I merged PR #847 (KTX-2047) — updated the infusion rate limit enforcement algorithm. Can you run a full downstream change impact analysis for REQ-142?' },
-  { id: 2, from: 'them', text: 'I detected the merge of PR #847 linked to KTX-2047 and have already started the analysis.\n\nDownstream Impact Analysis complete. The impact graph has been populated.\n\nI identified 12 affected artifacts across requirements, risk controls, verification tests, and regulatory mappings.\n\nFour items are flagged as stale and require immediate attention — RISK-047-A, SPEC-SW-230, and TEST-V-340 are directly invalidated by the algorithm change.\n\nI\'ve also surfaced 4 secondary items with lower confidence scores for your review.' },
-]
 
 function CIA() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [order, setOrder] = useState(['chat-panel', 'flow-panel'])
+
+  useEffect(() => {
+    if (localStorage.getItem('chat-panel-left') === 'false') {
+      setOrder(['flow-panel', 'chat-panel'])
+    }
+  }, [])
   const [selectedNode, setSelectedNode] = useState<Node | null>(null)
-  const [chatMessages, setChatMessages] = useState(INITIAL_MESSAGES)
+  const [chatMessages, setChatMessages] = useState(INITIAL_CHAT_MESSAGES)
   const [nodeOverrides, setNodeOverrides] = useState<Record<string, Record<string, unknown>>>({})
 
   useEffect(() => {
@@ -272,6 +274,7 @@ function CIA() {
       const a = next.indexOf(String(active.id))
       const b = next.indexOf(String(over.id))
       ;[next[a], next[b]] = [next[b], next[a]]
+      localStorage.setItem('chat-panel-left', String(next[0] === 'chat-panel'))
       return next
     })
   }
