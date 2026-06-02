@@ -1,7 +1,7 @@
 # Project
 
-Design task showcase — Next.js + shadcn/ui + Tailwind CSS.
-Deployed to Vercel. Goal: build fast, polished UI prototypes.
+Tokenizer — a design token management tool. This repo is the UI prototype / POC.
+Goal: move fast, validate interactions, keep the code clean enough to keep building on.
 
 # Commands
 
@@ -64,12 +64,44 @@ Overriding a component's internals is high risk: it creates fragile behaviour, i
 
 Document the *why* behind component choices — not just the code. Decisions that aren't written down are lost between sessions.
 
+# Code quality rules
+
+This is a prototype, not production — but the code must stay clean enough to keep iterating on.
+
+**Structure**
+- One component per file once it exceeds ~50 lines
+- Co-locate data with the page that uses it — don't abstract prematurely
+- No shared state management until there's a real need for it
+- `page.tsx` should be layout only — logic lives in components
+
+**Code**
+- TypeScript types for all data shapes — no `any`
+- Meaningful names — no `data2`, `temp`, `thing`
+- No commented-out code — delete it, git has history
+- Keep pages under ~300 lines — if growing, split into sub-components
+
+**Components**
+- shadcn first, extend only when necessary (see component selection rules below)
+- Don't pass more than 4–5 props to a component — if you need more, the shape is wrong
+
 # What NOT to do
 
 - Don't install extra UI libraries (no MUI, no Chakra, no Radix directly)
 - Don't use Lorem Ipsum — write realistic, context-appropriate copy
 - Don't add animations unless explicitly asked
 - Don't create new CSS files
+
+# Session start
+
+At the start of every session, read these files in order:
+
+1. `tokenizer_md/PRODUCT_VISION.md` — what Tokenizer is and why
+2. `tokenizer_md/PROJECT_STATE.md` — current state, active work, what's next
+
+Load others from `tokenizer_md/` only when relevant to the task:
+- `LIBRARIES.md` — available libraries and when to use them
+- `registry_learnings.md` — index of library-specific learnings
+- `learnings_<library>.md` — load when working with that library
 
 # Task brief
 
