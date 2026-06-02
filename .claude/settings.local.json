@@ -15,7 +15,20 @@
       "Bash(npx tsc *)",
       "Bash(node -e \"require\\('fs'\\).readFileSync\\('/Users/mukapeter/Desktop/design-task/src/app/traceability/page.tsx', 'utf8'\\)\")",
       "Bash(ls /Users/mukapeter/Desktop/ | grep -i ketryx)",
-      "Bash(git commit -m 'TEST-V-210 promotion: failed run static, triage + downstream sync post-sim *)"
+      "Bash(git commit -m 'TEST-V-210 promotion: failed run static, triage + downstream sync post-sim *)",
+      "Bash(ls /Users/mukapeter/Desktop/Repositories/Tokenizer)",
+      "Bash(mv /Users/mukapeter/Desktop/Tokenizer/tokenizer_md/mds/* /Users/mukapeter/Desktop/Tokenizer/tokenizer_md/ && rmdir /Users/mukapeter/Desktop/Tokenizer/tokenizer_md/mds)",
+      "Bash(npx shadcn@latest add accordion)",
+      "Bash(npx shadcn@latest add button --yes)",
+      "Bash(npx shadcn@latest add button)",
+      "Bash(npm install *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/tokenizer-demo-01)",
+      "mcp__Shadcn_UI__list_components",
+      "Bash(npx shadcn@latest add breadcrumb --yes)",
+      "Bash(vercel --version)",
+      "Bash(gh repo *)",
+      "Bash(git remote *)",
+      "Bash(git rm *)"
     ]
   }
 }
