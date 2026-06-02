@@ -203,7 +203,7 @@ function TabAContent() {
     window.addEventListener('mouseup', onMouseUp)
   }
 
-  function handleRowClick(row: Row) {
+  function handleRowClick(row: Token) {
     setSelectedRow(prev => prev?.id === row.id ? null : row)
   }
 
