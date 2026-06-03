@@ -308,6 +308,36 @@ For each section: what library components it uses, what is hand-rolled, and whet
 
 ---
 
+## Collections tree
+
+The tree is purely organisational navigation. It shows structure only — Collections and Groups. Tokens are never shown in the tree.
+
+### What the tree shows
+```
+Collection A
+  └── Group
+        └── Group       ← leaf (no sub-groups)
+Collection B
+  └── Group             ← leaf (no sub-groups)
+```
+
+A **leaf** in the tree is a Group with no sub-groups. It may contain 1 or many tokens — that doesn't affect whether it appears as a leaf.
+
+### Selection behaviour
+
+| Selected node | Grid shows |
+|---|---|
+| **Collection** | All tokens in all groups and sub-groups within it (recursive) |
+| **Group** | All tokens in all sub-groups within it + its own tokens (recursive) |
+| **Leaf (group with no sub-groups)** | All tokens directly inside it |
+
+Selection is always additive and recursive. You never get a partial view — selecting a node always shows the full contents of everything underneath it.
+
+### Scope
+The tree shows Collections and Groups within the **currently selected Repository** (selected via the AppHeader dropdown). The Repository level is not shown in the tree.
+
+---
+
 ## Open questions
 
 - Panel order and size persistence — `localStorage`?
