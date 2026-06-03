@@ -5,20 +5,49 @@
 ## Layout structure
 
 ```
-page.tsx
-  ├── sidebar.tsx          ← nav rail (left)
-  └── workspace.tsx        ← dynamic panel layout
-        └── workspace-panel.tsx (× N)
-              ├── Header   ← title + drag handle + close
-              ├── Content  ← any content (tree, grid, detail, etc.)
-              └── Footer   ← optional (e.g. + Create token)
+App
+├── Sidebar                          ← nav rail, always present
+└── AppShell                         ← fills remaining space
+      ├── AppHeader                  ← repo selector, global actions
+      └── Workspace                  ← resizable panel container, dnd context
+            ├── WorkspacePanel       ← Panel A (e.g. tree)
+            │     ├── PanelHeader    ← drag handle · title · actions · collapse · close
+            │     ├── PanelContent   ← scroll container, owns overflow
+            │     └── PanelFooter    ← optional
+            ├── ResizableHandle
+            ├── WorkspacePanel       ← Panel B (e.g. grid)
+            │     ├── PanelHeader
+            │     ├── PanelContent
+            │     └── PanelFooter
+            ├── ResizableHandle
+            └── WorkspacePanel       ← Panel C (e.g. detail)
+                  ├── PanelHeader
+                  ├── PanelContent
+                  └── PanelFooter
 ```
 
 The workspace is agnostic — it holds any number of panels (practical range: 1–4) and doesn't care what's inside them. Panels are slots. Swapping content on a different page doesn't require touching the layout.
 
 ---
 
-## Workspace API
+## AppHeader
+
+Sits above the workspace. Separate from panels. One per page/view.
+
+```
+[ repo selector ]  ··········  [ global actions ]
+```
+
+---
+
+## Workspace
+
+- Holds ordered list of panels
+- Owns dnd context + panel order state
+- Owns panel visibility (collapsed / open / closed)
+- Knows responsive priority per panel
+- Panel sizing is percentage-based (react-resizable-panels constraint)
+- Pixel-based collapse thresholds require a `ResizeObserver` on the workspace container
 
 ```tsx
 <Workspace panels={[
@@ -34,17 +63,44 @@ The workspace is agnostic — it holds any number of panels (practical range: 1�
 
 A panel is a self-contained UI unit.
 
-**Behaviour**
-- Resizable via handle on the edge (react-resizable-panels)
-- Draggable — reorders within the workspace (dnd-kit)
-- Closeable — optional
+### PanelHeader
 
-**Structure**
+```
+[ drag handle? ]  [ title ]  ··········  [ actions? ]  [ collapse? ]  [ close? ]
+```
+
+All behaviours are opt-in — off by default.
+
+| Prop | Type | Default | Notes |
+|---|---|---|---|
+| `title` | string or node | required | |
+| `draggable` | boolean | false | Shows drag handle, enables reorder |
+| `collapsible` | boolean | false | Shrinks panel to header only |
+| `closeable` | boolean | false | Removes panel from workspace |
+| `actions` | node | — | Right-side slot for contextual actions |
+
+### PanelContent
+
+- Owns `overflow-y-auto`
+- Fills available height between header and footer
+- Content passed as children — knows nothing about scroll
+
+### PanelFooter
+
+- Optional
+- Passed as a prop
+- Typical use: `+ Create token`, pagination, status
+
+### Full API
+
 ```tsx
 <WorkspacePanel
   title="Collections"
-  onClose={() => ...}        // optional
-  footer={<CreateButton />}  // optional
+  draggable
+  collapsible
+  closeable
+  actions={<SearchButton />}
+  footer={<CreateTokenButton />}
 >
   <CollectionsTree />
 </WorkspacePanel>
@@ -60,11 +116,12 @@ A panel is a self-contained UI unit.
 |---|---|---|
 | `ResizablePanelGroup` / `ResizablePanel` | shadcn/ui | Panel layout + sizing |
 | `ResizableHandle` | shadcn/ui (modified — see below) | Resize drag handle between panels |
-| `Button` | shadcn/ui | Close button, footer actions |
+| `Button` | shadcn/ui | Close, collapse, footer actions |
 | `DndContext` / `SortableContext` | @dnd-kit/core + sortable | Drag-to-reorder context |
 | `useSortable` | @dnd-kit/sortable | Per-panel drag hook |
 | `GripVertical` | lucide-react | Drag handle icon |
 | `X` | lucide-react | Close icon |
+| `ChevronsLeftRight` / `ChevronsRightLeft` | lucide-react | Collapse/expand icon |
 
 ### Customised — built on an existing component
 
@@ -76,13 +133,15 @@ A panel is a self-contained UI unit.
 
 | Component | Why no existing base |
 |---|---|
-| `workspace.tsx` | No library handles the dnd + resizable combination together |
+| `app-shell.tsx` | Simple flex wrapper — no library equivalent needed |
+| `app-header.tsx` | Repo selector + global actions bar |
+| `workspace.tsx` | No library handles dnd + resizable together |
 | `workspace-panel.tsx` | Header / content / footer shell — no shadcn equivalent |
 
 ---
 
-## Layout rules (to be defined)
+## Open questions
 
-- Panel sizing is percentage-based (react-resizable-panels constraint)
-- Pixel-based collapse thresholds require a `ResizeObserver` on the workspace container
-- Panel C (detail) is conditional — shown/hidden based on selection state
+- Panel order and size persistence — `localStorage`?
+- Responsive priority — which panel collapses first when viewport shrinks?
+- Re-opening a closed panel — needs a panel manager or toggle mechanism
