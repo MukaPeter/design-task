@@ -210,10 +210,24 @@ Description                   ← always, from config
 sections[0], sections[1]...   ← from config, in declaration order
 ```
 
+### Section inventory
+
+Sections are reusable building blocks. Each is independent — the config picks which ones to include per token type. A section used by one type today can be added to any other type in the future without changes to the section itself.
+
+| Section | Currently used by | Notes |
+|---|---|---|
+| `ColorSwatch` | `color` | Large swatch with format + mode dropdowns |
+| `ValuesColor` | `color` | Color formats × modes table |
+| `ValuesDimension` | `dimension` | Unit conversion table |
+| `ValuesDuration` | `duration` | ms/s conversion table |
+| `ValuesNumber` | `number` | Intent dropdown + formatted value |
+| `CodeSyntax` | all | Collapsible name/value table, editable |
+| `Aliases` | all | Collapsible token path list |
+
 ### Files
 - `token-configs.tsx` — the config map, one entry per DTCG type
 - `token-detail-content.tsx` — the dumb renderer (replaces `token-type-content.tsx`)
-- Section components — unchanged building blocks (`ValuesColor`, `CodeSyntax`, etc.)
+- `sections/` — building blocks, one file per section
 
 ---
 
