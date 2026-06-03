@@ -4,6 +4,12 @@ A design token management tool. Personal project — built to learn, to avoid pa
 
 ---
 
+## What is a design token
+
+Design tokens are design decisions captured as name/value pairs. They substitute hardcoded values with meaningful names and act as a shared vocabulary between humans — mostly designers and engineers — and LLMs supporting humans in building solutions.
+
+---
+
 ## What it is
 
 A UI for designers and token managers to create, organise, and maintain design tokens — with an open, engineering-friendly consumption layer so developers can use tokens without knowing anything about the tool.
