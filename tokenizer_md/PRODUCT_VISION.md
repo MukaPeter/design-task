@@ -44,6 +44,8 @@ A vibe-coded UI doesn't have an MCP server. Obsidian MDs are not structured enou
 
 Every other tool is built for humans reading a UI. Tokenizer is built for humans **and** LLMs.
 
+> **USP: Serve your organisation on all levels** — from the PM who doesn't know what a token is, to the engineer who knows exactly what they need. Same token store. Same MCP server. The right context served to whoever is asking.
+
 ---
 
 ## The real problem: LLMs building without guardrails
