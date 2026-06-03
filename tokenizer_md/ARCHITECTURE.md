@@ -336,6 +336,15 @@ Selection is always additive and recursive. You never get a partial view — sel
 ### Scope
 The tree shows Collections and Groups within the **currently selected Repository** (selected via the AppHeader dropdown). The Repository level is not shown in the tree.
 
+### Breadcrumb
+The breadcrumb above the grid reflects the path to the selected node within the current repository:
+
+```
+Collection A  /  Group  /  Group
+```
+
+The repository name is **not included** — the repo is the active context for the whole session. Navigating away from a repo means leaving that context entirely. Repeating it in the breadcrumb adds no value.
+
 ---
 
 ## Open questions
