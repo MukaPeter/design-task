@@ -308,6 +308,44 @@ For each section: what library components it uses, what is hand-rolled, and whet
 
 ---
 
+## Token grid
+
+### Row
+Each row represents one token. The row holds the token's name and its value in each mode.
+
+### Name column
+- Always the first column
+- Shows the token type icon (not editable) + the token name
+- The token name is the user-given identifier (e.g. `primary-blue`, `spacing-4`, `brand/action/default`)
+- Name is read-only for now — editable later, with the ability to push the updated name back to connected systems
+
+### Value columns (one per mode)
+Each mode is a separate column. A value cell contains:
+- **Color sample** — only for color tokens
+- **Value** — the displayed value in the selected unit or format
+- **Unit / format dropdown** — only where applicable (color → format, dimension → unit, duration → unit, number → intent)
+- **Alias indicator** — visual flag shown when the token is an alias. Design and logic TBD.
+- **Recalculation** — switching unit or format recalculates the displayed value. The canonical stored value never changes — conversion is display-only.
+
+### Modes
+
+> A mode is a named condition under which a token takes a specific value.
+
+The token identity stays the same — same name, same type, same purpose. Only the value changes per mode. Example: `color/brand/primary` is `#0066FF` in Light mode and `#3385FF` in Dark mode.
+
+Modes are defined at the **Collection level** — all tokens in a collection share the same set of modes. The grid columns change depending on which collection is selected.
+
+**Naming:**
+- Default names are auto-incremented — Mode 1, Mode 2, Mode 3...
+- User can rename any column by clicking the header (e.g. "Light", "Dark", "High contrast")
+- Adding a new column always uses the next default number based on count, regardless of existing column names
+
+### Actions column
+- Last column, always present
+- Opens the detail panel for the selected row
+
+---
+
 ## Collections tree
 
 The tree is purely organisational navigation. It shows structure only — Collections and Groups. Tokens are never shown in the tree.
