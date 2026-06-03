@@ -5,7 +5,8 @@ import { Tree } from 'react-arborist'
 import type { NodeRendererProps, NodeApi } from 'react-arborist'
 import { ChevronRight, PanelRightOpen, X, Copy } from 'lucide-react'
 import { Sidebar } from '@/components/sidebar'
-import { Panel } from '@/components/panel'
+import { AppShell } from '@/components/app-shell'
+import { AppHeader } from '@/components/app-header'
 import { WorkspacePanel } from '@/components/workspace-panel'
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable'
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table'
@@ -414,11 +415,6 @@ function TabAContent() {
   )
 }
 
-const PANEL_TABS = [
-  { id: 'a1', label: 'Tab A', content: <TabAContent /> },
-  { id: 'a2', label: 'Tab B', content: <div className="p-4 text-sm text-muted-foreground">Panel — Content B</div> },
-]
-
 const REPOSITORIES = [
   { id: 'r1', name: 'Brand tokens' },
   { id: 'r2', name: 'Product tokens' },
@@ -431,13 +427,10 @@ export default function Demo2() {
   return (
     <div className="flex h-screen bg-background">
       <Sidebar items={NAV_ITEMS} />
-      <main className="flex-1 overflow-hidden">
-        <ResizablePanelGroup orientation="horizontal">
-          <ResizablePanel id="panel-1" defaultSize={100}>
-            <Panel id="panel-1" tabs={PANEL_TABS} repositories={REPOSITORIES} />
-          </ResizablePanel>
-        </ResizablePanelGroup>
-      </main>
+      <AppShell>
+        <AppHeader repositories={REPOSITORIES} />
+        <TabAContent />
+      </AppShell>
     </div>
   )
 }
