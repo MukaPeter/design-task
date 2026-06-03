@@ -387,13 +387,26 @@ The header row is non-interactive — it's a visual separator, not a selectable 
 
 The tree is purely organisational navigation. It shows structure only — Collections and Groups. Tokens are never shown in the tree.
 
+### Naming
+"Collection", "Group", and "Token" are **structural types** — they describe what something is in the hierarchy. The actual names are always user-defined, either imported or created manually.
+
+```
+color-primitives        ← a Collection (user named)
+  └── brand             ← a Group (user named)
+        └── primary     ← a Group (user named, leaf)
+typescale               ← a Collection (user named)
+  └── heading           ← a Group (user named)
+```
+
+The type determines behaviour (selection scope, grid rendering). The name is whatever the user called it.
+
 ### What the tree shows
 ```
-Collection A
-  └── Group
-        └── Group       ← leaf (no sub-groups)
-Collection B
-  └── Group             ← leaf (no sub-groups)
+color-primitives
+  └── brand
+        └── primary     ← leaf (no sub-groups)
+typescale
+  └── heading            ← leaf (no sub-groups)
 ```
 
 A **leaf** in the tree is a Group with no sub-groups. It may contain 1 or many tokens — that doesn't affect whether it appears as a leaf.
