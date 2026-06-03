@@ -336,6 +336,12 @@ Selection is always additive and recursive. You never get a partial view — sel
 ### Scope
 The tree shows Collections and Groups within the **currently selected Repository** (selected via the AppHeader dropdown). The Repository level is not shown in the tree.
 
+### Selection constraints
+
+- **Single selection only** — one node at a time, no multi-select
+- **Maximum scope = Collection** — the largest grid view is one collection and all tokens within it
+- **Repository-level view is not available** — you cannot select all collections simultaneously
+
 ### Breadcrumb
 The breadcrumb above the grid reflects the path to the selected node within the current repository:
 
