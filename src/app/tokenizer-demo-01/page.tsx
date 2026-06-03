@@ -6,6 +6,7 @@ import type { NodeRendererProps, NodeApi } from 'react-arborist'
 import { ChevronRight, PanelRightOpen, X, Copy } from 'lucide-react'
 import { Sidebar } from '@/components/sidebar'
 import { Panel } from '@/components/panel'
+import { WorkspacePanel } from '@/components/workspace-panel'
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable'
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
@@ -213,40 +214,42 @@ function TabAContent() {
 
       {/* Collections tree */}
       <ResizablePanel id="inner-left" defaultSize={23} minSize={15}>
-        <div className="h-full bg-background flex flex-col">
-          <div className="h-14 flex items-center px-4 border-b shrink-0">
-            <span className="text-sm font-semibold">Collections</span>
-          </div>
+        <WorkspacePanel title="Collections" collapsible>
           <CollectionsTree onSelect={setSelectedPath} />
-        </div>
+        </WorkspacePanel>
       </ResizablePanel>
 
       <ResizableHandle withHandle />
 
       {/* Grid */}
       <ResizablePanel id="inner-middle" defaultSize={77} minSize={20}>
-        <div className="h-full bg-background flex flex-col">
-          <div className="h-14 flex items-center px-4 border-b shrink-0">
-            {selectedPath ? (
-              <Breadcrumb>
-                <BreadcrumbList>
-                  {selectedPath.map((segment, i) => (
-                    <React.Fragment key={i}>
-                      {i > 0 && <BreadcrumbSeparator />}
-                      <BreadcrumbItem>
-                        {i === selectedPath.length - 1
-                          ? <BreadcrumbPage className="font-semibold">{segment}</BreadcrumbPage>
-                          : <span className="text-muted-foreground text-sm">{segment}</span>
-                        }
-                      </BreadcrumbItem>
-                    </React.Fragment>
-                  ))}
-                </BreadcrumbList>
-              </Breadcrumb>
-            ) : (
-              <span className="text-sm text-muted-foreground">—</span>
-            )}
-          </div>
+        <WorkspacePanel
+          title={selectedPath ? (
+            <Breadcrumb>
+              <BreadcrumbList>
+                {selectedPath.map((segment, i) => (
+                  <React.Fragment key={i}>
+                    {i > 0 && <BreadcrumbSeparator />}
+                    <BreadcrumbItem>
+                      {i === selectedPath.length - 1
+                        ? <BreadcrumbPage className="font-semibold">{segment}</BreadcrumbPage>
+                        : <span className="text-muted-foreground text-sm">{segment}</span>
+                      }
+                    </BreadcrumbItem>
+                  </React.Fragment>
+                ))}
+              </BreadcrumbList>
+            </Breadcrumb>
+          ) : (
+            <span className="text-muted-foreground font-normal">—</span>
+          )}
+          footer={
+            <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground hover:text-foreground">
+              <Plus size={14} />
+              Create token
+            </Button>
+          }
+        >
           <div className="flex-1 min-h-0 overflow-auto">
             {!selectedPath ? (
               <div className="h-full flex items-center justify-center text-xs text-muted-foreground">
@@ -388,13 +391,7 @@ function TabAContent() {
               </TableBody>
             </Table>}
           </div>
-          <div className="shrink-0 border-t px-2 py-2">
-            <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground hover:text-foreground">
-              <Plus size={14} />
-              Create token
-            </Button>
-          </div>
-        </div>
+        </WorkspacePanel>
       </ResizablePanel>
 
       {/* Detail panel — appears when a row is selected */}
