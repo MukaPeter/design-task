@@ -172,6 +172,51 @@ Aliases          ← collapsible, always present
 
 ---
 
+## Detail panel — composition model
+
+The detail panel uses a **config-driven composition model**. Each token type declares what it renders — the renderer is dumb and just executes the config.
+
+### Why
+- Adding a new token type = one config entry, no new layout code
+- Changing a shared section (e.g. `CodeSyntax` style) = updates all token types automatically
+- Structure is explicit and readable in one place
+
+### Shape
+
+```ts
+interface TokenConfig {
+  description: string
+  sections: React.ReactNode[]   // rendered in order, after TokenMeta + Description
+}
+
+const TOKEN_CONFIGS: Partial<Record<DtcgType, TokenConfig>> = {
+  color: {
+    description: '...',
+    sections: [<ColorSwatch />, <ValuesColor />, <CodeSyntax />, <Aliases />],
+  },
+  dimension: {
+    description: '...',
+    sections: [<ValuesDimension />, <CodeSyntax />, <Aliases />],
+  },
+  // new token type = one new entry here
+}
+```
+
+### Renderer
+
+```
+TokenMeta                     ← always, from structure
+Description                   ← always, from config
+sections[0], sections[1]...   ← from config, in declaration order
+```
+
+### Files
+- `token-configs.tsx` — the config map, one entry per DTCG type
+- `token-detail-content.tsx` — the dumb renderer (replaces `token-type-content.tsx`)
+- Section components — unchanged building blocks (`ValuesColor`, `CodeSyntax`, etc.)
+
+---
+
 ## Open questions
 
 - Panel order and size persistence — `localStorage`?
