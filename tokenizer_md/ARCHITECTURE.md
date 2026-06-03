@@ -26,7 +26,9 @@ App
                   └── PanelFooter
 ```
 
-The workspace is agnostic — it holds any number of panels (practical range: 1–4) and doesn't care what's inside them. Panels are slots. Swapping content on a different page doesn't require touching the layout.
+The workspace is agnostic — it holds any number of panels and doesn't care what's inside them. Panels are slots. Swapping content on a different page doesn't require touching the layout.
+
+The number of panels is not hardcoded. The workspace renders whatever it receives. There is no upper limit enforced at the component level — the practical constraint is screen space, not the component. 1 panel (full-width view) is just as valid as 4 panels side by side.
 
 ---
 
