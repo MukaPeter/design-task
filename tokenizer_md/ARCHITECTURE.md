@@ -344,6 +344,21 @@ Modes are defined at the **Collection level** — all tokens in a collection sha
 - Last column, always present
 - Opens the detail panel for the selected row
 
+### Grid audit — current state vs target
+
+| Area | Current state | Target |
+|---|---|---|
+| **Location** | Inside `page.tsx` | Extract to `components/token-grid.tsx` |
+| **Cell renderers** | Giant `if/else` chain per token type inline in JSX | Config-driven `CellRenderer` per token type, same pattern as detail panel |
+| **Column resize** | Hand-rolled `mousedown/mousemove/mouseup` inline | Extract to `useColumnResize` hook |
+| **Open detail button** | Raw `<button>` | shadcn `Button` with `variant="ghost"` `size="icon-sm"` |
+| **Mode columns** | Hardcoded to one column (Mode 1) | Dynamic — driven by selected collection's mode definitions |
+| **Column header rename** | Not built | Click header to rename, default name auto-incremented |
+| **Add mode** | Not built | Add column button, TBD placement |
+| **Alias indicator** | Not built | Visual flag per cell, design and logic TBD |
+| **Mock data** | `ROWS` hardcoded in `page.tsx` | Passed as prop to `TokenGrid` |
+| **`DimensionUnit` / `DurationUnit` types** | Defined inline in `page.tsx` | Move to shared types file |
+
 ---
 
 ## Collections tree
