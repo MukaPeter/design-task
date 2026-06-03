@@ -344,6 +344,28 @@ Modes are defined at the **Collection level** — all tokens in a collection sha
 - Last column, always present
 - Opens the detail panel for the selected row
 
+### Grid grouping
+
+The grid is not a flat list. When the selected node contains sub-groups, the grid renders each sub-group as a section with a header row, followed by its tokens.
+
+**Group header row** — shows the full path from the collection down to that group:
+
+```
+semantic/primary
+  default         [value]  [value]
+  default-hover   [value]  [value]
+  foreground      [value]  [value]
+
+semantic/secondary
+  default         [value]  [value]
+  default-hover   [value]  [value]
+  foreground      [value]  [value]
+```
+
+The header row is non-interactive — it's a visual separator, not a selectable row. The path depth matches however deep the user has defined their group structure.
+
+---
+
 ### Grid audit — current state vs target
 
 | Area | Current state | Target |
