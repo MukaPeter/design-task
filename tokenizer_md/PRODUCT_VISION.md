@@ -16,6 +16,36 @@ A UI for designers and token managers to create, organise, and maintain design t
 
 ---
 
+## Why not just build your own?
+
+Nothing stops you. A JSON file, a vibe-coded UI, and Obsidian for docs — you have a token system. For a solo designer who can build, that works.
+
+**The DIY stack breaks when:**
+- Your team grows — someone else needs to edit tokens without touching code
+- You have more than one platform — your custom UI doesn't push to Webflow, iOS, and Framer simultaneously
+- You have more than one brand — managing variants becomes a maintenance burden
+- Figma updates — your sync breaks and you fix it manually
+- You need versioning — rolling back to last week's token set is not trivial
+
+**Who Tokenizer is really for:**
+The designer who knows what tokens should do but can't build the infrastructure. The team where designer and engineer need a shared tool neither has to maintain.
+
+**And the LLM angle changes the calculus entirely.**
+
+A solo designer now has a reason to use Tokenizer even without a team. The MCP server makes tokens available to every AI tool you use — Claude, Cursor, Copilot — without any engineering work. Your tokens become machine-queryable, structured, and always up to date.
+
+A vibe-coded UI doesn't have an MCP server. Obsidian MDs are not structured enough for an LLM to query reliably. Tokenizer is.
+
+---
+
+## Positioning
+
+> The only token management tool where the token store is also an API — consumable by code, by design tools, and by AI agents natively.
+
+Every other tool is built for humans reading a UI. Tokenizer is built for humans **and** LLMs.
+
+---
+
 ## AI-assisted prototyping use case
 
 ### The problem
