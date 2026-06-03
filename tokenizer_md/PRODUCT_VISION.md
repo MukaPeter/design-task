@@ -46,6 +46,43 @@ Every other tool is built for humans reading a UI. Tokenizer is built for humans
 
 ---
 
+## The real problem: LLMs building without guardrails
+
+In most organisations today, PMs and non-technical stakeholders are vibe-coding solutions with AI tools and shopping them around internally. They prompt "give me a dashboard" and the LLM produces something that looks decent. C-level sees it, loves it. Engineering inherits a trainwreck — wrong colors, wrong spacing, hardcoded values, random component library, zero relation to the design system. Not scalable. Not on-brand. Nothing to do with the product portfolio.
+
+The problem isn't the PM. The problem is the LLM had no guardrails.
+
+Tokenizer's MCP server fixes this invisibly. The PM still prompts "give me a dashboard." But now the LLM has the full token context injected automatically — values, types, descriptions, usage rules. The output uses the right colors, the right spacing, the right typography. Not because the PM knew to ask. Because the guardrails were already there.
+
+---
+
+## LLM use cases — a spectrum
+
+The same problem exists at every level of technical knowledge. What changes is how much context the LLM needs to make the right call.
+
+**Zero knowledge — the PM**
+No understanding of tokens, design systems, or libraries. The LLM must do all the decision-making. Token descriptions are critical — not just `#0066FF` but "primary action color, use for buttons, links, focus rings, not decorative elements." The LLM reads intent and applies it.
+
+**Partial knowledge — the library user**
+Someone using a component library (shadcn, MUI, Tailwind) but unsure how to theme it. The LLM needs both: what the tokens mean, and how they map to that library's theming system (`color/brand/primary` → `--primary`). Tokenizer provides both through the MCP server and platform mapping layer.
+
+**Full knowledge — the engineer**
+Knows exactly what they're doing. Just needs tokens mapped to the right variable names for their stack. The LLM consumes the mapping and gets out of the way.
+
+One system covers all three. The depth of context consumed varies by who's asking — Tokenizer always has the right answer ready.
+
+---
+
+## Two capabilities that enable this
+
+**1. Structured token context**
+Each token carries meaning — name, type, description, usage rules — not just a value. The MCP server serves this context to any LLM that asks. The richer the description, the better the LLM's decisions.
+
+**2. Token-to-library mapping**
+Tokenizer maps your tokens to the theming vocabulary of specific libraries and platforms. When an LLM generates code using shadcn, it uses your `--primary`. When it generates iOS, it uses your `UIColor`. The output is on-brand at the code level, not just the visual level.
+
+---
+
 ## AI-assisted prototyping use case
 
 ### The problem
