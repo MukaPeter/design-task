@@ -1,6 +1,6 @@
 # Project State — Tokenizer UI
 
-Last updated: 2026-06-03 (session 6)
+Last updated: 2026-06-03 (session 6 — end)
 
 ---
 
@@ -51,14 +51,18 @@ Build + design roadmap: `tokenizer_md/ROADMAP.md`
 ## Current layout
 
 ```
-Sidebar | AppHeader (repo selector)
-          └─ Workspace
-               ├─ Panel A: Collections tree (23%)
-               ├─ Panel B: Token grid (77%) + breadcrumb header
-               └─ Panel C: Token detail panel (35%, conditional)
+page.tsx                     ← layout only (~22 lines)
+  ├── Sidebar                ← nav rail
+  └── AppShell               ← fills remaining space
+        ├── AppHeader        ← repo selector dropdown
+        └── TokensView       ← owns all shared state
+              ├── Panel A: CollectionsTree (23%, collapsible)
+              ├── Panel B: TokenGrid (77%, breadcrumb header, + Create token footer)
+              └── Panel C: TokenDetailPanel (35%, conditional on row selection)
 ```
 
-This layout is correctly structured but not yet refactored into the planned component architecture. Everything currently lives in `tokenizer-demo-01/page.tsx`.
+All panels use `WorkspacePanel` shell (header/content/footer).
+`TokensView` owns: `selectedPath`, `selectedRow`, `numberIntent`.
 
 ---
 
@@ -68,40 +72,47 @@ This layout is correctly structured but not yet refactored into the planned comp
 src/
   app/
     page.tsx                                    ← redirects to /tokenizer-demo-01
-    tokenizer-demo-01/page.tsx                  ← ALL layout + logic (needs splitting — see ROADMAP)
+    tokenizer-demo-01/page.tsx                  ← layout only: Sidebar + AppShell + AppHeader + TokensView
   components/
+    app-shell.tsx                               ← flex wrapper filling space after sidebar
+    app-header.tsx                              ← repo selector dropdown + actions slot
+    workspace.tsx                               ← Workspace component (DndContext + ResizablePanelGroup)
+    workspace-panel.tsx                         ← WorkspacePanel shell (header/content/footer)
+    tokens-view.tsx                             ← 3-panel layout + shared state (selectedPath, selectedRow, numberIntent)
+    collections-tree.tsx                        ← CollectionsTree + TreeItem type + TREE_DATA mock
+    token-grid.tsx                              ← TokenGrid + ROWS mock data
     sidebar.tsx                                 ← 3-state nav rail
-    panel.tsx                                   ← repo selector header + panel wrapper (to be replaced by Workspace)
+    panel.tsx                                   ← DEAD — to be deleted
     token-detail-panel/
       index.tsx                                 ← panel shell (to be stripped — becomes pure content)
       types.ts                                  ← DtcgType, Token, ColorFormat, COLOR_FORMATS, TOKEN_TYPE_ICONS, toDisplayName
       color-utils.ts                            ← hexToRgb, convertColor and helpers
       token-type-content.tsx                    ← type switcher (to be replaced by config-driven model)
       sections/
-        token-meta.tsx                          ← Type/DTCG/Name rows
-        description.tsx                         ← description block
-        color-swatch.tsx                        ← swatch + format/mode dropdowns
-        values-color.tsx                        ← color formats × modes table
-        values-duration.tsx                     ← ms/s conversion table
-        values-dimension.tsx                    ← px/rem/em/%/pt conversion table
-        values-number.tsx                       ← intent dropdown + formatted value
-        code-syntax.tsx                         ← collapsible name/value table, editable
-        aliases.tsx                             ← collapsible token path list
-        section-table.tsx                       ← shared table wrapper
+        token-meta.tsx
+        description.tsx
+        color-swatch.tsx
+        values-color.tsx
+        values-duration.tsx
+        values-dimension.tsx
+        values-number.tsx
+        code-syntax.tsx
+        aliases.tsx
+        section-table.tsx
     ui/
       table.tsx                                 ← modified: hover colour, header exclusion
       resizable.tsx                             ← modified: hover highlight
       button.tsx                                ← icon-sm variant added
       accordion.tsx                             ← installed, not used (base-ui bug)
-      breadcrumb.tsx                            ← installed, used in grid header
+      breadcrumb.tsx                            ← used in TokensView grid panel header
 
-tokenizer_md/                                   ← all project docs
-  PRODUCT_VISION.md                             ← what Tokenizer is and why
+tokenizer_md/
+  PRODUCT_VISION.md                             ← what Tokenizer is, why, positioning, LLM use cases
   PROJECT_STATE.md                              ← this file
-  ARCHITECTURE.md                               ← layout system, component model, data model decisions
-  ROADMAP.md                                    ← what needs design, what is ready to build
+  ARCHITECTURE.md                               ← full layout system, component model, token grid spec, detail panel composition model, collections tree behaviour
+  ROADMAP.md                                    ← what needs design, what is ready to build, separation of concerns
   LIBRARIES.md                                  ← available libraries and when to use them
-  registry_learnings.md                         ← index of library-specific learnings
+  registry_learnings.md                         ← index of all docs and library learnings
   learnings_*.md                                ← per-library learnings
 CLAUDE.md                                       ← session bootstrap + working rules
 ```
@@ -110,27 +121,40 @@ CLAUDE.md                                       ← session bootstrap + working 
 
 ## Key decisions / learnings
 
+- **base-ui accordion bug**: `AccordionContent` causes JSX parse errors in Turbopack. Using hand-rolled collapsibles. Will extract a shared `DetailSection` wrapper.
 - **`group-hover` copy icon**: only works reliably with shadcn `TableRow`. Plain HTML `<tr>` does not trigger group-hover correctly.
-- **Accordion**: base-ui's `AccordionContent` caused JSX parse errors in Turbopack. Using plain `useState` + `ChevronDown` collapsible instead.
 - **DropdownMenuTrigger**: do not use `asChild` with a `<span>` — the `asChild` prop leaks to the DOM.
 - **Color format**: stored as canonical hex, converted on render via `convertColor()`.
-- **`toDisplayName()`**: converts camelCase DTCG type names to human-readable lowercase.
-- **Tailwind v4 scanning**: arbitrary utility classes (e.g. `grid-cols-[5rem_1rem_1fr]`, `w-[84px]`) are NOT reliably generated for new component files outside `src/app/`. Use plain HTML elements with `colgroup` / inline `style` for layout-critical column widths.
-- **Button**: project's shadcn config uses base-ui primitives by default. Manually replaced with standard Radix-based implementation and installed `@radix-ui/react-slot`. `icon-sm` size variant added.
+- **Tailwind v4 scanning**: arbitrary utility classes are NOT reliably generated for new component files outside `src/app/`. Use plain HTML elements with `colgroup` / inline `style` for layout-critical column widths.
+- **Button**: Radix-based shadcn implementation. `icon-sm` size variant added.
 - **TOKEN_TYPE_ICONS**: defined with `React.createElement` (not JSX) in `types.ts` so the file stays a `.ts` module.
-- **SectionTable alignment**: `pl-[12px]` indent, `table-fixed`, first-column width `92px` via `colgroup` inline style. Second column starts at 120px from panel left.
-- **Dimension units**: px, %, rem, em, pt. `%` echoes raw value. `pt` = px × 0.75.
-- **Number intent state**: shared between grid cell dropdown and detail panel — lifted to `TabAContent`.
-- **Breadcrumb**: selection path from tree passed as `string[]`, rendered with shadcn `Breadcrumb`. Repo name excluded — repo is the active context, not part of the path.
+- **SectionTable alignment**: `pl-[12px]` indent, `table-fixed`, first-column width `92px` via `colgroup` inline style.
+- **Breadcrumb**: selection path from tree passed as `string[]`. Repo name excluded — repo is the active context.
+- **WorkspacePanel content area**: uses `flex flex-col` so that `flex-1` children (like CollectionsTree) fill available height correctly.
 
 ---
 
-## What's next
+## What's next (priority order)
 
-See `tokenizer_md/ROADMAP.md` for the full list. Immediate priorities:
+### Immediate — ready to build
+1. **Delete `panel.tsx`** — dead file, no longer imported anywhere
+2. **Detail panel refactor**
+   - Extract `DetailSection` collapsible wrapper (replaces 6 hand-rolled accordions in sections/)
+   - Config-driven composition model (`token-configs.tsx` + `token-detail-content.tsx`)
+   - Strip shell from `TokenDetailPanel` — make it pure content, let `WorkspacePanel` own the header
+3. **Grid refactor**
+   - Extract `useColumnResize` hook from `token-grid.tsx`
+   - Config-driven cell renderers per token type
+4. **Separation of concerns**
+   - Shared types file (`DimensionUnit`, `DurationUnit`, `ColorFormat`, `NumberIntent`, `DtcgType`)
+   - CSS custom properties for repeated layout values
 
-1. **Refactor layout** — extract `Workspace`, `WorkspacePanel`, `AppShell`, `AppHeader`
-2. **Refactor detail panel** — `DetailSection` wrapper, config-driven composition model
-3. **Refactor grid** — extract `TokenGrid`, `useColumnResize`, config-driven cell renderers
-4. **Separate data from UI** — move mock data out of components, define shared types
-5. **CSS variables** — replace hardcoded values with custom properties
+### Needs design first
+- Alias indicator in a cell
+- Add mode column
+- Column header rename
+- Breadcrumb as navigation
+- Re-opening a closed panel
+- Lock / unlock mode toggle
+
+See `tokenizer_md/ROADMAP.md` for full list.
