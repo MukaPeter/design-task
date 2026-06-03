@@ -142,6 +142,36 @@ All behaviours are opt-in — off by default.
 
 ---
 
+## Token data model (to be moved to its own doc)
+
+Each token has:
+
+| Field | Description |
+|---|---|
+| **Name** | User-defined. Whatever was imported from Figma or created manually (e.g. `primary-blue`, `spacing-4`, `brand/action/default`) |
+| **Type** | Tokenizer's internal enriched type (e.g. `dimension`) |
+| **DTCG type** | W3C Design Token Community Group standard type — what gets exported and consumed by other tools |
+
+Both Type and DTCG type are shown in the detail panel. They are often the same, but diverge when the user enriches a Figma primitive — e.g. Figma exports `number`, user maps it to DTCG `dimension`.
+
+> **Note:** This section belongs in a dedicated token data model doc. Move it out of ARCHITECTURE.md when that doc is created.
+
+---
+
+## Detail panel — constant structure
+
+Every token type shows these, always:
+
+```
+TokenMeta        ← Type / DTCG type / Name
+Description      ← user-defined or default
+[type-specific]  ← 0 or more sections (ValuesColor, ValuesDimension, etc.)
+CodeSyntax       ← collapsible, always present
+Aliases          ← collapsible, always present
+```
+
+---
+
 ## Open questions
 
 - Panel order and size persistence — `localStorage`?
