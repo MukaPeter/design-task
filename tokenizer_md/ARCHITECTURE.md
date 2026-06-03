@@ -224,9 +224,86 @@ Sections are reusable building blocks. Each is independent — the config picks 
 | `CodeSyntax` | all | Collapsible name/value table, editable |
 | `Aliases` | all | Collapsible token path list |
 
+### Section component audit
+
+For each section: what library components it uses, what is hand-rolled, and whether the custom parts can be replaced.
+
+---
+
+#### `TokenMeta`
+| | |
+|---|---|
+| **Uses** | Plain HTML `<table>` + `<colgroup>`, lucide icons via `TOKEN_TYPE_ICONS` |
+| **Custom** | The table layout itself — no shadcn table used here deliberately (colgroup width control) |
+| **Replace?** | No. shadcn `Table` doesn't support reliable `colgroup` column widths with Tailwind v4 scanning. Plain HTML is correct here. |
+
+---
+
+#### `Description`
+| | |
+|---|---|
+| **Uses** | Plain HTML only |
+| **Custom** | Entire component |
+| **Replace?** | No library equivalent needed — it's two text nodes. Keep as-is. |
+
+---
+
+#### `ColorSwatch`
+| | |
+|---|---|
+| **Uses** | `DropdownMenu` (shadcn/base-ui), `ChevronDown` (lucide), `convertColor` (custom util) |
+| **Custom** | The swatch div (`<div style={{ backgroundColor }}>`) — plain HTML with inline style |
+| **Replace?** | No library component for a color swatch. Inline style is correct here — background color is dynamic. |
+
+---
+
+#### `ValuesColor` / `ValuesDimension` / `ValuesDuration` / `ValuesNumber`
+| | |
+|---|---|
+| **Uses** | `SectionTable` (custom), shadcn `Table` rows/cells, `DropdownMenu` (number only), `Copy` (lucide) |
+| **Custom** | Collapsible wrapper — hand-rolled `useState` + `ChevronDown` button repeated in every section |
+| **Replace?** | **Yes** — extract a shared `DetailSection` collapsible wrapper. All four sections use identical open/close pattern. |
+
+---
+
+#### `CodeSyntax`
+| | |
+|---|---|
+| **Uses** | `SectionTable` (custom), shadcn `Table` rows/cells, `Input` (shadcn), `Copy` + `ChevronDown` (lucide) |
+| **Custom** | Collapsible wrapper (same as Values sections). Inline editing via click-to-edit pattern. Copy button. |
+| **Replace?** | Collapsible → `DetailSection` (same fix as Values). Click-to-edit and copy button — no library equivalent, keep custom. |
+
+---
+
+#### `Aliases`
+| | |
+|---|---|
+| **Uses** | shadcn `Table` rows/cells, `ChevronDown` (lucide) |
+| **Custom** | Collapsible wrapper (same pattern). Token path rendered as plain spans. |
+| **Replace?** | Collapsible → `DetailSection`. Path rendering — no library needed, keep as-is. |
+
+---
+
+#### `SectionTable`
+| | |
+|---|---|
+| **Uses** | shadcn `Table`, `TableHeader`, `TableBody`, `TableHead`, `TableRow` |
+| **Custom** | The `colgroup` with fixed first-column width (`92px`), the `pl-[12px]` indent |
+| **Replace?** | No — this is a thin wrapper that solves a real layout problem (reliable column widths). Keep it. |
+
+---
+
+### Summary of custom parts to address
+
+| Issue | Affected sections | Action |
+|---|---|---|
+| Hand-rolled collapsible (useState + ChevronDown) | `ValuesColor`, `ValuesDimension`, `ValuesDuration`, `ValuesNumber`, `CodeSyntax`, `Aliases` | Extract `DetailSection` wrapper |
+| All other custom code | Various | No library replacement available — keep |
+
 ### Files
 - `token-configs.tsx` — the config map, one entry per DTCG type
 - `token-detail-content.tsx` — the dumb renderer (replaces `token-type-content.tsx`)
+- `sections/detail-section.tsx` — shared collapsible wrapper (new)
 - `sections/` — building blocks, one file per section
 
 ---
