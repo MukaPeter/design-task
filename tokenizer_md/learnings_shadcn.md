@@ -183,6 +183,18 @@ Key points:
 
 ---
 
+**Separate table implementations for grid vs. detail panel** — the token grid and detail panel section tables share the shadcn `Table` component but need different behaviour. Don't try to make one `Table` do both:
+
+| Concern | Token grid | Section tables (`SectionTable`, `Aliases`) |
+|---|---|---|
+| Row dividers | `border-b` on `TableRow` | `[&_tr]:border-0` override |
+| Border collapse | Default (`collapse`) | `.tok-table` class (`separate`) |
+| Corner radius | Not applied | `.tok-row-hover` on `td:first/last-child` |
+
+Apply `.tok-table` and `[&_tr]:border-0` only to the detail panel tables — not the base `Table` component.
+
+**`--accent` token** — shadcn's `hover:bg-accent` drives ghost button hover AND dropdown item hover. In this project `--accent` is remapped to `--tok-gray-100` (pure gray) in `globals.css`. If hover states look blue/dirty, check `--accent` first.
+
 **`group-hover` only works with shadcn `TableRow`** — plain HTML `<tr>` does not trigger `group-hover`. If you need a hover-reveal button inside a table, you must use the shadcn `TableRow` component. This is because `TableRow` renders a `<tr>` with Tailwind's `group` support baked in correctly.
 
 **Excluding header rows from hover** — add `[thead_&]:hover:bg-transparent` to `TableRow`'s base className. This removes the hover background for rows inside `<thead>` without affecting body rows:

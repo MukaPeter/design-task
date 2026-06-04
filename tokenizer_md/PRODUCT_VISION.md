@@ -147,6 +147,80 @@ The Tokenizer enriches these into a DTCG-aligned internal type system:
 
 When importing from Figma, the user fine-tunes the type — e.g. `number` → `dimension/rem`. The mapping is stored so re-imports don't need reconfiguration.
 
+**Number intents** — `number` tokens carry an intent that defines how the raw value is used and formatted on export:
+
+| Intent | Example value | Export format |
+|---|---|---|
+| `opacity` | `0.5` | `0.5` |
+| `line-height` | `1.5` | `1.5` |
+| `scale` | `1.25` | `1.25` |
+| `z-index` | `100` | `100` |
+| `count` | `3` | `3` |
+| `angle` | `135` | `135deg` |
+| `generic` | `4` | `4` |
+
+The intent does not change the stored value — it only affects how the export adapter formats the output.
+
+---
+
+## Composite tokens
+
+A composite token is a structured container. Each field holds either a reference to another token or a raw value. The field order and types are defined by a schema — the output string is assembled by the export adapter in schema order.
+
+### Two modes
+
+**Schema-driven (DTCG standard types)**
+Tokenizer knows the schema for each standard composite type. The composition UI guides the user through each field in order, enforcing types and assembly format per platform.
+
+| Type | Fields |
+|---|---|
+| `shadow` | x (dimension), y (dimension), blur (dimension), spread (dimension), color (color) |
+| `gradient` | angle (number/angle), stops: color (color) + position (number) |
+| `typography` | fontFamily, fontSize (dimension), fontWeight, lineHeight (number), letterSpacing (dimension) |
+| `border` | width (dimension), style (strokeStyle), color (color) |
+| `transition` | property (string), duration (duration), easing (cubicBezier) |
+| `cubicBezier` | x1, y1, x2, y2 (all number) |
+
+**Custom schema**
+For composite types not covered by the DTCG standard. User defines the fields, their types, and the assembly format string:
+
+```
+field 1: angle  → type: number/angle
+field 2: color1 → type: color
+field 3: color2 → type: color
+assembly: "{angle}, {color1}, {color2}"
+```
+
+Custom schemas are saved as first-class objects — named, reusable, versioned. A team defines a custom composite schema once, then creates as many tokens of that type as they need. Different platforms can have different assembly format strings for the same schema.
+
+---
+
+## Token support across design tools
+
+How Figma, Framer, and Webflow represent tokens — and where Tokenizer fills the gaps.
+
+| Token type | Figma | Framer | Webflow |
+|---|---|---|---|
+| `color` | ✓ hex, rgba | ✓ hex, rgba | ✓ hex, rgba, hsl |
+| `number` | ✓ raw, no unit | ✓ raw, no unit | — |
+| `dimension` | ✗ (as number) | ✗ (as number) | ✓ with unit |
+| `string` | ✓ | ✓ | — |
+| `boolean` | ✓ | — | — |
+| `fontFamily` | ✓ (as string) | ✓ (as string) | ✓ |
+| `fontWeight` | ✓ (as number) | ✓ (as number) | — |
+| `duration` | ✗ | ✗ | ✗ |
+| `cubicBezier` | ✗ | ✗ | ✗ |
+| `shadow` | ✓ as Style (not Variable) — can reference variables internally | ✗ | ✗ |
+| `gradient` | ✓ as Style (not Variable) — can reference variables internally | ✗ | ✗ |
+| `typography` | ✓ as Style (not Variable) — can reference variables internally | ✗ | ✗ |
+| `border` | ✗ | ✗ | ✗ |
+| `transition` | ✗ | ✗ | ✗ |
+| `strokeStyle` | ✗ | ✗ | ✗ |
+| `aliases / references` | ✓ | ✓ flattened on export | ✓ |
+| `modes` | ✓ | ✓ | ✓ |
+
+**The pattern:** all three tools are primitive-only in their variable/token systems. Figma has a parallel Styles system for shadow, gradient, and typography — these can reference variables internally but are not exported as structured token data. None of the three tools have a true composite token format. Only Webflow stores units with dimension values. Tokenizer sits above all three as the structured, enriched, composite-aware canonical store — importing from any of these tools and exporting back to all of them.
+
 ---
 
 ## Import / export model

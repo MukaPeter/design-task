@@ -1,229 +1,323 @@
 'use client'
 
-import { useRef, useState } from 'react'
-import { PanelRightOpen, ChevronDown } from 'lucide-react'
-import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table'
-import { Input } from '@/components/ui/input'
+import { useState, useMemo } from 'react'
+import { TextSearch, Plus } from 'lucide-react'
+import {
+  useReactTable,
+  getCoreRowModel,
+  createColumnHelper,
+} from '@tanstack/react-table'
 import { Button } from '@/components/ui/button'
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu'
-import { TOKEN_TYPE_ICONS, toDisplayName, COLOR_FORMATS } from '@/components/token-detail-panel/types'
-import { convertColor } from '@/components/token-detail-panel/color-utils'
-import { NUMBER_INTENTS } from '@/components/token-detail-panel/sections/values-number'
-import type { Token, ColorFormat } from '@/components/token-detail-panel/types'
-import type { NumberIntent } from '@/components/token-detail-panel/sections/values-number'
-import React from 'react'
+import { TOKEN_TYPE_ICONS } from '@/components/token-detail-panel/types'
+import type { Token } from '@/components/token-detail-panel/types'
+import type { DtcgType, ColorFormat, NumberIntent } from '@/types/tokens'
+import { renderCell, DIMENSION_UNITS, DURATION_UNITS } from '@/components/cell-renderers'
+import type { CellRendererProps } from '@/components/cell-renderers'
+import type { TreeItem } from '@/components/collections-tree'
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+export interface LiveToken {
+  id: string
+  name: string
+  type: DtcgType
+  description?: string | null
+  collection_name: string
+  path: string[]
+}
 
-type DimensionUnit = 'px' | '%' | 'rem' | 'em' | 'pt'
-type DurationUnit = 'ms' | 's'
+type GridRow =
+  | { kind: 'spacer'; id: string; label: string; first: boolean }
+  | { kind: 'token'; token: Token }
 
-const DIMENSION_UNITS: DimensionUnit[] = ['px', '%', 'rem', 'em', 'pt']
-const DURATION_UNITS: DurationUnit[] = ['ms', 's']
+function pathStartsWith(tokenPath: string[], prefix: string[]): boolean {
+  if (prefix.length === 0) return true
+  if (tokenPath.length < prefix.length) return false
+  return prefix.every((seg, i) => tokenPath[i] === seg)
+}
 
-export const ROWS: Token[] = [
-  { id: '1',  name: 'color',       type: 'color'       },
-  { id: '2',  name: 'dimension',   type: 'dimension'   },
-  { id: '3',  name: 'duration',    type: 'duration'    },
-  { id: '4',  name: 'fontFamily',  type: 'fontFamily'  },
-  { id: '5',  name: 'fontWeight',  type: 'fontWeight'  },
-  { id: '6',  name: 'number',      type: 'number'      },
-  { id: '7',  name: 'string',      type: 'string'      },
-  { id: '8',  name: 'boolean',     type: 'boolean'     },
-  { id: '9',  name: 'gradient',    type: 'gradient'    },
-  { id: '10', name: 'typography',  type: 'typography'  },
-  { id: '11', name: 'border',      type: 'border'      },
-  { id: '12', name: 'shadow',      type: 'shadow'      },
-  { id: '13', name: 'transition',  type: 'transition'  },
-  { id: '14', name: 'cubicBezier', type: 'cubicBezier' },
-  { id: '15', name: 'strokeStyle', type: 'strokeStyle' },
-]
+function getGroupedRows(liveTokens: LiveToken[], selectedPath: string[]): GridRow[] {
+  if (selectedPath.length === 0) return []
+
+  const collectionName = selectedPath[0]
+  const subPath = selectedPath.slice(1)
+
+  const filtered = liveTokens.filter(t =>
+    t.collection_name === collectionName &&
+    pathStartsWith(t.path, subPath)
+  )
+
+  if (filtered.length === 0) return []
+
+  const groups = new Map<string, LiveToken[]>()
+  for (const token of filtered) {
+    const key = token.path.join('/')
+    if (!groups.has(key)) groups.set(key, [])
+    groups.get(key)!.push(token)
+  }
+
+  // Single group that exactly matches the selected path — no spacer
+  if (groups.size === 1 && subPath.length > 0 && subPath.length === filtered[0].path.length) {
+    return filtered.map(t => ({ kind: 'token' as const, token: { id: t.id, name: t.name, type: t.type } }))
+  }
+
+  const rows: GridRow[] = []
+  let isFirst = true
+  for (const [pathKey, groupTokens] of groups) {
+    const parts = pathKey.split('/')
+    const label = parts[parts.length - 1]
+    rows.push({ kind: 'spacer', id: pathKey, label, first: isFirst })
+    isFirst = false
+    for (const t of groupTokens) {
+      rows.push({ kind: 'token', token: { id: t.id, name: t.name, type: t.type } })
+    }
+  }
+  return rows
+}
+
+// ─── Column definitions ───────────────────────────────────────────────────────
+
+type ColData = Record<string, string>
+const columnHelper = createColumnHelper<ColData>()
+
+const BORDER = '1px solid var(--tok-gray-200)'
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 interface TokenGridProps {
-  rows?: Token[]
+  treeData: TreeItem[]
+  selectedPath: string[]
   selectedRow: Token | null
   numberIntent: NumberIntent
+  liveTokens: LiveToken[]
+  initialModeValues: Record<string, string>
   onRowClick: (row: Token) => void
   onNumberIntentChange: (intent: NumberIntent) => void
 }
 
-// ─── Component ───────────────────────────────────────────────────────────────
-
 export function TokenGrid({
-  rows = ROWS,
+  treeData: _treeData,
+  selectedPath,
   selectedRow,
   numberIntent,
+  liveTokens,
+  initialModeValues,
   onRowClick,
   onNumberIntentChange,
 }: TokenGridProps) {
   const [editingCell, setEditingCell]     = useState<string | null>(null)
   const [colorFormat, setColorFormat]     = useState<ColorFormat>('hex')
-  const [dimensionUnit, setDimensionUnit] = useState<DimensionUnit>('px')
-  const [durationUnit, setDurationUnit]   = useState<DurationUnit>('ms')
-  const [mode1Values, setMode1Values]     = useState<Record<string, string>>({
-    ...Object.fromEntries(rows.map(row => [row.id, ''])),
-    '1': '#0066FF',
+  const [dimensionUnit, setDimensionUnit] = useState<typeof DIMENSION_UNITS[number]>('px')
+  const [durationUnit, setDurationUnit]   = useState<typeof DURATION_UNITS[number]>('ms')
+  const [mode1Values, setMode1Values]     = useState<Record<string, string>>(initialModeValues)
+  const [hoveredRow, setHoveredRow]       = useState<string | null>(null)
+
+  const columns = useMemo(() => [
+    columnHelper.accessor('name', {
+      header: 'Name',
+      size: 160,
+      minSize: 80,
+      maxSize: 600,
+    }),
+    columnHelper.accessor('mode1', {
+      header: 'Mode 1',
+      size: 220,
+      minSize: 120,
+      maxSize: 600,
+    }),
+  ], [])
+
+  const table = useReactTable({
+    data: [],
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    columnResizeMode: 'onChange',
+    enableColumnResizing: true,
   })
 
-  const [colWidths, setColWidths] = useState({ name: 160, mode1: 220 })
-  const resizeRef = useRef<{ col: keyof typeof colWidths, startX: number, startWidth: number } | null>(null)
-
-  function startResize(col: keyof typeof colWidths, e: React.MouseEvent) {
-    e.preventDefault()
-    resizeRef.current = { col, startX: e.clientX, startWidth: colWidths[col] }
-
-    function onMouseMove(e: MouseEvent) {
-      if (!resizeRef.current) return
-      const delta = e.clientX - resizeRef.current.startX
-      const newWidth = Math.max(60, resizeRef.current.startWidth + delta)
-      setColWidths(prev => ({ ...prev, [resizeRef.current!.col]: newWidth }))
-    }
-
-    function onMouseUp() {
-      resizeRef.current = null
-      window.removeEventListener('mousemove', onMouseMove)
-      window.removeEventListener('mouseup', onMouseUp)
-    }
-
-    window.addEventListener('mousemove', onMouseMove)
-    window.addEventListener('mouseup', onMouseUp)
-  }
+  const headers = table.getHeaderGroups()[0]?.headers ?? []
+  const gridRows = getGroupedRows(liveTokens, selectedPath)
 
   return (
-    <Table className="table-fixed border-b">
-      <TableHeader>
-        <TableRow>
-          {(['name', 'mode1'] as const).map((col, i) => (
-            <TableHead
-              key={col}
-              style={{ width: colWidths[col] }}
-              className="relative border-r select-none"
-            >
-              {['Name', 'Mode 1'][i]}
-              <div
-                className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-primary/40 active:bg-primary/60"
-                onMouseDown={(e) => startResize(col, e)}
-              />
-            </TableHead>
-          ))}
-          <TableHead className="w-8" />
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {rows.map(row => (
-          <TableRow
-            key={row.id}
-            data-state={selectedRow?.id === row.id ? 'selected' : undefined}
-            className="group"
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+
+      {/* ── Sticky header ── */}
+      <div
+        className="bg-background"
+        style={{ display: 'flex', alignItems: 'stretch', height: 40, borderBottom: BORDER, flexShrink: 0 }}
+      >
+        {headers.map(header => (
+          <div
+            key={header.id}
+            style={{
+              width: header.getSize(),
+              flexShrink: 0,
+              display: 'flex',
+              alignItems: 'center',
+              padding: '0 8px',
+              fontSize: '13px',
+              fontWeight: 500,
+              position: 'relative',
+              borderRight: BORDER,
+              userSelect: 'none',
+            }}
           >
-            {/* Name cell */}
-            <TableCell className="border-r">
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="w-4 flex items-center justify-center shrink-0">{TOKEN_TYPE_ICONS[row.type]}</span>
-                <span className="truncate text-xs">{toDisplayName(row.name)}</span>
-              </div>
-            </TableCell>
-
-            {/* Value cell */}
-            <TableCell
-              className="border-r"
-              onClick={() => row.type !== 'color' && setEditingCell(row.id)}
-            >
-              {editingCell === row.id ? (
-                <Input
-                  autoFocus
-                  value={mode1Values[row.id]}
-                  onChange={e => setMode1Values(prev => ({ ...prev, [row.id]: e.target.value }))}
-                  onBlur={() => setEditingCell(null)}
-                  onKeyDown={e => e.key === 'Enter' && setEditingCell(null)}
-                  className="h-auto border-none shadow-none p-0 text-xs bg-transparent focus-visible:ring-0 focus-visible:outline-none w-full"
-                />
-              ) : row.type === 'color' ? (
-                <div className="flex items-center gap-2 min-w-0">
-                  <span
-                    className="w-4 h-4 rounded-sm shrink-0 border border-black/10 cursor-pointer"
-                    style={{ backgroundColor: mode1Values[row.id] || 'transparent' }}
-                    onClick={() => setEditingCell(row.id)}
-                  />
-                  <span className="truncate text-xs flex-1 min-w-0">
-                    {mode1Values[row.id] ? convertColor(mode1Values[row.id], colorFormat) : ''}
-                  </span>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger className="flex items-center gap-0.5 text-[10px] text-muted-foreground hover:text-foreground shrink-0 px-1 cursor-pointer" onClick={e => e.stopPropagation()}>
-                      {colorFormat}<ChevronDown size={10} />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      {COLOR_FORMATS.map(fmt => (
-                        <DropdownMenuItem key={fmt} className="text-xs" onClick={() => setColorFormat(fmt)}>{fmt}</DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              ) : row.type === 'dimension' ? (
-                <div className="flex items-center gap-2 min-w-0" onClick={() => setEditingCell(row.id)}>
-                  <span className="truncate text-xs flex-1 min-w-0 cursor-text">
-                    {mode1Values[row.id] ? `${mode1Values[row.id]}${dimensionUnit}` : ''}
-                  </span>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger className="flex items-center gap-0.5 text-[10px] text-muted-foreground hover:text-foreground shrink-0 px-1 cursor-pointer" onClick={e => e.stopPropagation()}>
-                      {dimensionUnit}<ChevronDown size={10} />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      {DIMENSION_UNITS.map(unit => (
-                        <DropdownMenuItem key={unit} className="text-xs" onClick={() => setDimensionUnit(unit)}>{unit}</DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              ) : row.type === 'duration' ? (
-                <div className="flex items-center gap-2 min-w-0" onClick={() => setEditingCell(row.id)}>
-                  <span className="truncate text-xs flex-1 min-w-0 cursor-text">
-                    {mode1Values[row.id] ? `${mode1Values[row.id]}${durationUnit}` : ''}
-                  </span>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger className="flex items-center gap-0.5 text-[10px] text-muted-foreground hover:text-foreground shrink-0 px-1 cursor-pointer" onClick={e => e.stopPropagation()}>
-                      {durationUnit}<ChevronDown size={10} />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      {DURATION_UNITS.map(unit => (
-                        <DropdownMenuItem key={unit} className="text-xs" onClick={() => setDurationUnit(unit)}>{unit}</DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              ) : row.type === 'number' ? (
-                <div className="flex items-center gap-2 min-w-0" onClick={() => setEditingCell(row.id)}>
-                  <span className="truncate text-xs flex-1 min-w-0 cursor-text">{mode1Values[row.id]}</span>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger className="flex items-center gap-0.5 text-[10px] text-muted-foreground hover:text-foreground shrink-0 px-1 cursor-pointer whitespace-nowrap" onClick={e => e.stopPropagation()}>
-                      {NUMBER_INTENTS.find(i => i.value === numberIntent)!.label}<ChevronDown size={10} />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="min-w-[160px]">
-                      {NUMBER_INTENTS.map(i => (
-                        <DropdownMenuItem key={i.value} className="text-xs whitespace-nowrap" onClick={() => onNumberIntentChange(i.value)}>{i.label}</DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              ) : (
-                <span className="truncate block text-xs cursor-text">{mode1Values[row.id]}</span>
-              )}
-            </TableCell>
-
-            {/* Actions cell */}
-            <TableCell className="w-8">
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={() => onRowClick(row)}
-                className="text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100"
-              >
-                <PanelRightOpen size={16} />
-              </Button>
-            </TableCell>
-          </TableRow>
+            {String(header.column.columnDef.header ?? '')}
+            {header.column.getCanResize() && (
+              <div
+                onMouseDown={header.getResizeHandler()}
+                style={{
+                  position: 'absolute',
+                  right: 0,
+                  top: 0,
+                  height: '100%',
+                  width: 4,
+                  cursor: 'col-resize',
+                }}
+              />
+            )}
+          </div>
         ))}
-      </TableBody>
-    </Table>
+        {/* Actions column — add mode */}
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 8px' }}>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            title="Add mode"
+            className="tok-icon-btn text-muted-foreground hover:text-foreground"
+          >
+            <Plus size={14} />
+          </Button>
+        </div>
+      </div>
+
+      {/* ── Body rows ── */}
+      <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+      <div style={{ borderBottom: BORDER }}>
+        {gridRows.map((gridRow, i) => {
+
+          // Spacer / group title row
+          if (gridRow.kind === 'spacer') {
+            return (
+              <div
+                key={`spacer-${gridRow.id}`}
+                style={{
+                  paddingTop:    gridRow.first ? 16 : 40,
+                  paddingBottom: 12,
+                  paddingLeft:   16,
+                  paddingRight:  16,
+                }}
+              >
+                <span className="tok-panel-title text-foreground">{gridRow.label}</span>
+              </div>
+            )
+          }
+
+          // Token row
+          const row        = gridRow.token
+          const isGroupStart = i === 0 || gridRows[i - 1].kind === 'spacer'
+          const isSelected = selectedRow?.id === row.id
+          const isHovered  = hoveredRow === row.id
+
+          const colWidths = headers.map(h => h.getSize())
+
+          const cellProps: CellRendererProps = {
+            value:                mode1Values[row.id] ?? '',
+            isEditing:            editingCell === row.id,
+            onStartEdit:          () => setEditingCell(row.id),
+            onEndEdit:            () => setEditingCell(null),
+            onChange:             v => setMode1Values(prev => ({ ...prev, [row.id]: v })),
+            colorFormat,
+            onColorFormatChange:  setColorFormat,
+            dimensionUnit,
+            onDimensionUnitChange: setDimensionUnit,
+            durationUnit,
+            onDurationUnitChange: setDurationUnit,
+            numberIntent,
+            onNumberIntentChange,
+          }
+
+          return (
+            <div
+              key={row.id}
+              onMouseEnter={() => setHoveredRow(row.id)}
+              onMouseLeave={() => setHoveredRow(null)}
+              style={{
+                display:         'flex',
+                alignItems:      'stretch',
+                height:          40,
+                overflow:        'hidden',
+                borderTop:       isGroupStart ? BORDER : undefined,
+                borderBottom:    BORDER,
+                backgroundColor: isSelected
+                  ? 'rgba(0, 156, 255, 0.08)'
+                  : isHovered
+                    ? 'var(--tok-gray-50)'
+                    : 'transparent',
+              }}
+            >
+              {/* Name cell */}
+              <div
+                style={{
+                  width:       colWidths[0] ?? 160,
+                  flexShrink:  0,
+                  borderRight: BORDER,
+                  padding:     '0 8px',
+                  display:     'flex',
+                  alignItems:  'center',
+                  gap:         8,
+                  minWidth:    0,
+                  overflow:    'hidden',
+                }}
+              >
+                <span style={{ width: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  {TOKEN_TYPE_ICONS[row.type]}
+                </span>
+                <span style={{ fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {row.name}
+                </span>
+              </div>
+
+              {/* Mode 1 cell */}
+              <div
+                style={{
+                  width:       colWidths[1] ?? 220,
+                  flexShrink:  0,
+                  borderRight: BORDER,
+                  padding:     '0 8px',
+                  display:     'flex',
+                  alignItems:  'center',
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  {renderCell(row.type, cellProps)}
+                </div>
+              </div>
+
+              {/* Actions cell */}
+              <div
+                style={{
+                  flex:            1,
+                  display:         'flex',
+                  alignItems:      'center',
+                  justifyContent:  'flex-end',
+                  padding:         '0 8px',
+                }}
+              >
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => onRowClick(row)}
+                  className="tok-icon-btn text-muted-foreground hover:text-foreground"
+                  style={{ opacity: isHovered || isSelected ? 1 : 0 }}
+                >
+                  <TextSearch size={16} />
+                </Button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+      </div>
+
+    </div>
   )
 }

@@ -1,0 +1,47 @@
+:root {
+  /* Brand */
+  --tok-blue-500: #009CFF;
+
+  /* Dirty blues — blue-shifted surfaces */
+  --tok-dirtyblue-50:  oklch(0.985 0.02 230);
+  --tok-dirtyblue-100: oklch(0.97  0.01 230);
+  --tok-dirtyblue-150: oklch(0.95  0.04 230);
+  --tok-dirtyblue-900: oklch(0.2   0.1  230);
+
+  /* Grays */
+  --tok-white:    oklch(1     0 0);
+  --tok-gray-50:  oklch(0.985 0 0);
+  --tok-gray-100: oklch(0.97  0 0);
+  --tok-gray-200: oklch(0.922 0 0);
+  --tok-gray-300: oklch(0.820 0 0);
+  --tok-gray-400: oklch(0.708 0 0);
+  --tok-gray-500: oklch(0.556 0 0);
+  --tok-gray-600: oklch(0.439 0 0);
+  --tok-gray-700: oklch(0.371 0 0);
+  --tok-gray-800: oklch(0.269 0 0);
+  --tok-gray-900: oklch(0.205 0 0);
+  --tok-gray-950: oklch(0.145 0 0);
+
+  /* Destructive */
+  --tok-red-400: oklch(0.704 0.191 22.216);
+  --tok-red-500: oklch(0.577 0.245 27.325);
+
+  /* Radius */
+  --tok-radius-base: 0.625rem;
+
+  /* Typography */
+  --tok-font-size-xs: 0.75rem;
+  --tok-font-size-sm: 0.875rem;
+
+  --tok-line-height-xs: 1rem;
+  --tok-line-height-sm: 1.25rem;
+
+  --tok-font-weight-normal:   400;
+  --tok-font-weight-medium:   500;
+  --tok-font-weight-semibold: 600;
+
+  /* Layout */
+  --tok-panel-header:    3.5rem;
+  --tok-panel-padding-x: 1rem;
+  --tok-panel-padding:   1rem;
+}

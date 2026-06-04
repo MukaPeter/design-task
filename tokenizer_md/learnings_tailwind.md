@@ -100,6 +100,40 @@ Set explicitly — don't rely on DOM order for stacking.
 
 ---
 
+## Arbitrary classes not scanning outside src/app/
+
+Arbitrary Tailwind utilities like `hover:bg-[--tok-gray-100]` or `text-[10px]` are not reliably generated for component files outside `src/app/`. They appear to work during initial build but silently fail after file changes.
+
+**Fix:** Define named classes in `typescale.css` using `@layer components`. Use those class names in components instead of arbitrary values.
+
+**`.ts` files are never scanned** — Tailwind only scans `.tsx`, `.jsx`, `.html` etc. A plain `.ts` file (e.g. `types.ts` with `React.createElement`) will never generate any Tailwind classes, even standard ones. Always use a named CSS class for any styling in `.ts` files.
+
+```css
+/* typescale.css */
+@layer components {
+  .tok-tree-item:hover { background-color: var(--tok-gray-100); }
+  .tok-unit-label { font-size: 10px; }
+  .tok-row-hover:hover { background-color: var(--tok-gray-100); }
+}
+```
+
+Apply the class name in the component — Tailwind doesn't need to scan it because it's a plain CSS class.
+
+---
+
+## Rounded table rows
+
+`border-radius` on `<tr>` is unreliable in all browsers, even with `border-collapse: separate`. Apply radius to the first and last `<td>` / `<th>` instead:
+
+```css
+.tok-row-hover:hover td:first-child { border-radius: var(--radius-md) 0 0 var(--radius-md); }
+.tok-row-hover:hover td:last-child  { border-radius: 0 var(--radius-md) var(--radius-md) 0; }
+```
+
+`border-collapse: separate` must also be set — use a CSS class (`.tok-table`) since the Tailwind `border-separate` utility does not scan reliably outside `src/app/`.
+
+---
+
 ## justify-center override in button
 
 shadcn Button base class includes `justify-center`. When adding a `justify-start` size variant, `tailwind-merge` may not reliably override it. If needed:

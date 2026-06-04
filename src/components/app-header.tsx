@@ -23,10 +23,10 @@ export function AppHeader({ repositories, defaultRepositoryId, actions }: AppHea
   const selected = repositories.find(r => r.id === selectedId)
 
   return (
-    <div className="h-14 flex items-center justify-between px-4 border-b shrink-0">
+    <div className="h-panel-header flex items-center justify-between px-panel-padding-x border-b shrink-0">
       {repositories.length > 0 ? (
         <DropdownMenu>
-          <DropdownMenuTrigger className="flex items-center gap-1.5 text-sm font-medium hover:text-foreground/80 focus:outline-none cursor-pointer">
+          <DropdownMenuTrigger className="flex items-center gap-1.5 tok-nav-label hover:text-foreground/80 focus:outline-none cursor-pointer">
             {selected?.name ?? 'Select repository'}
             <ChevronDown size={14} className="text-muted-foreground" />
           </DropdownMenuTrigger>
