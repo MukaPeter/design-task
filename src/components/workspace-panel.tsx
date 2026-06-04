@@ -14,7 +14,9 @@ interface WorkspacePanelProps {
   children: React.ReactNode
   onClose?: () => void
   dragListeners?: Record<string, unknown>
-  dragAttributes?: Record<string, unknown>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  dragAttributes?: Record<string, any>
+  contentScroll?: boolean
 }
 
 export function WorkspacePanel({
@@ -28,6 +30,7 @@ export function WorkspacePanel({
   onClose,
   dragListeners,
   dragAttributes,
+  contentScroll = true,
 }: WorkspacePanelProps) {
   const [collapsed, setCollapsed] = useState(false)
 
@@ -35,7 +38,7 @@ export function WorkspacePanel({
     <div className="h-full flex flex-col bg-background border-r last:border-r-0">
 
       {/* Header */}
-      <div className="h-14 flex items-center gap-2 px-4 border-b shrink-0">
+      <div className="h-panel-header flex items-center gap-2 px-panel-padding-x border-b shrink-0">
 
         {/* Drag handle */}
         {draggable && (
@@ -49,7 +52,7 @@ export function WorkspacePanel({
         )}
 
         {/* Title */}
-        <div className="flex-1 min-w-0 text-sm font-semibold truncate">
+        <div className="flex-1 min-w-0 tok-panel-title truncate">
           {title}
         </div>
 
@@ -63,7 +66,7 @@ export function WorkspacePanel({
             <Button
               variant="ghost"
               size="icon-sm"
-              className="text-muted-foreground hover:text-foreground"
+              className="tok-icon-btn text-muted-foreground hover:text-foreground"
               onClick={() => setCollapsed(c => !c)}
             >
               {collapsed
@@ -77,7 +80,7 @@ export function WorkspacePanel({
             <Button
               variant="ghost"
               size="icon-sm"
-              className="text-muted-foreground hover:text-foreground"
+              className="tok-icon-btn text-muted-foreground hover:text-foreground"
               onClick={onClose}
             >
               <X size={14} />
@@ -88,7 +91,7 @@ export function WorkspacePanel({
 
       {/* Content */}
       {!collapsed && (
-        <div className="flex-1 min-h-0 overflow-y-auto flex flex-col">
+        <div className={`flex-1 min-h-0 flex flex-col${contentScroll ? ' overflow-y-auto' : ' overflow-hidden'}`}>
           {children}
         </div>
       )}

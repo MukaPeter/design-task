@@ -65,9 +65,8 @@ function SortablePanel({
         id={panel.id}
         defaultSize={panel.defaultSize ?? 33}
         minSize={panel.minSize ?? 10}
-        style={style}
-        ref={setNodeRef}
       >
+        <div ref={setNodeRef} style={{ ...style, height: '100%' }}>
         <WorkspacePanel
           title={panel.title}
           draggable={panel.draggable}
@@ -81,6 +80,7 @@ function SortablePanel({
         >
           {panel.content}
         </WorkspacePanel>
+        </div>
       </ResizablePanel>
       {!isLast && <ResizableHandle withHandle />}
     </React.Fragment>
